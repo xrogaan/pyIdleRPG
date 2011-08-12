@@ -1,0 +1,81 @@
+An attempt to replace the old unmaintained IdleRPG.
+
+Here are some actions you can do:
+
+### Registering
+
+Will register a new character.
+
+    /msg pyIdleRPG REGISTER <char name> <char pass> <char class> <email adress>
+
+### Loggin in
+
+    /msg pyIdleRPG LOGIN <char name> <char pass>
+
+### Loggin out
+
+    /msg pyIdleRPG LOGOUT
+
+### Changing your password
+
+   /msg pyIdleRPG NEWPASS <new password>
+
+### TODO
+
+  * account removal
+  * list objects
+  * alignment changes
+  * obtaining bot info
+  * Leveling 
+    
+    We will use the IdleRPG formula:
+    600*(1.16^LEVEL)
+  * Quests
+  * WHOAMI: check online status, it throw your level and TTL too
+
+## Penalties
+
+Template: time*(modifier^LEVEL)
+
+Nickchange: 40
+Part: 200
+Quit: 30
+LOGOUT: 20*(1.14^LEVEL)
+Channel privmsg: [message lenght]*(1.14^LEVEL)
+Channel notice: [message lenght]*(1.14^LEVEL)
+Being kicked: 350*(1.14^LEVEL)
+
+## Characters options
+
+In this old realm tainted by evil, you'll not see any good vs evil fight. No,
+here every fight is about power. Power to lead to the ultimate domination and
+control over its very dominions.
+
+You begin your journey as an human, but might found yourself altered.
+
+Class: you and only you can choose your class.
+
+Racial traits: Some items can change your morphology and then apply a modifier
+               on your caracteristics.
+
+Feats: by leveling up, you can gain a feat that will allow you more power
+       or curse you journey.
+
+## Bodies modifications
+
+You will be able to see your body shape change as well as some of you organs.
+This modifications will be triggered by several items that you might found on
+your journey.
+
+In this IdleRPG, you can find:
+
+Demonic related potions:
+  * Succubi milk
+  * Succubi's Delight
+
+Grow tails of different types and shapes
+  * demonic tails
+  * dog-gish tails
+  * cat-tish tails
+  * cow tails
+
