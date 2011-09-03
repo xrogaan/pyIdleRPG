@@ -354,14 +354,18 @@ class Channel:
                 del d[nick]
 
     def change_nick(self, before, after):
-        self.userdict[after] = 1
+        self.userdict[after] = self.userdict[before]
         del self.userdict[before]
         if before in self.operdict:
-            self.operdict[after] = 1
+            self.operdict[after] = self.operdict[before]
             del self.operdict[before]
         if before in self.voiceddict:
-            self.voiceddict[after] = 1
+            self.voiceddict[after] = self.voiceddict[before]
             del self.voiceddict[before]
+
+    def set_userdetails(self, nick, details):
+        if self.userdict.has_key(nick):
+            self.userdict[nick] = details
 
     def set_mode(self, mode, value=None):
         """Set mode on the channel.
@@ -373,9 +377,9 @@ class Channel:
             value -- Value
         """
         if mode == "o":
-            self.operdict[value] = 1
+            self.operdict[value] = self.userdict[value]
         elif mode == "v":
-            self.voiceddict[value] = 1
+            self.voiceddict[value] = self.userdict[value]
         else:
             self.modes[mode] = value
 
