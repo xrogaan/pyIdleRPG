@@ -1,0 +1,253 @@
+#!/usr/bin/env python2
+# -*- charset: utf-8 -*-
+# vim:set shiftwidth=4 tabstop=4 expandtab textwidth=80:
+
+version= 0,1,0
+
+import sys
+import traceback
+from time import sleep
+
+from ircbot import SingleServerIRCBot
+from irclib import nm_to_n, nm_to_uh, nm_to_h
+from pymongo import Connection, GEO2D
+
+class IdleRPG(SingleServerIRCBot):
+    # virtual events are commands that can be handled by the bot
+    _privVirtualEvent = ['quit', 'doom']
+    _pubVirtualEvent = ['whoami', 'register', 'login', 'logout',
+                        'newpass', 'removeme', 'align', 'status',
+                        'quest']
+    owermask = []
+
+    def __init__(self, config):
+        self.settings = config
+        self.db = Connection().pyIdleRPG
+        self.users = self.db['users']
+        self.userBase = dict()
+        # users schema: fullhost, nickname, password, characterName,
+        #               email, loggedin
+        # Todo: on channel join, ensure logged in status
+
+    def our_start(self):
+        SingleServerIRCBot.__init__(self, self.settings['servers'],
+                                    self.settings['nickname'],
+                                    self.settings['nickname'])
+        SingleServerIRCBot.start()
+
+    def _initialyseplayers(self, channel):
+        for ch in self.channels.values():
+            for (nickname, details) in ch.userdict.iteritems():
+                self.userBase[nickname] = Character(nickname,
+                                                    details[1],
+                                                    details[2])
+
+    def is_loggedIn(self, nickname):
+        if self.userBase.has_key(nickname):
+           if self.userBase[nickname] is not -1:
+               return True
+        return False
+
+    def on_nicknameinuse(self, c, e):
+        self.settings['nickname'] = c.get_nickname() + "_"
+        c.nick(self.settings['nickname'])
+
+    def on_welcome(self, c, e):
+        print("Joining channels...")
+        print(self.settings['channels'])
+        for channel in self.settings['channels']:
+            c.join(channel)
+            sleep(1)
+            c.who(channel)
+            self._initialyseplayers(channel)
+#            c.names(chan) # will trigger a namreply event
+
+    def on_whoreply(self, c, e):
+        """
+        Will check every user on a given channel
+        """
+        # ['#info', 'youple',
+        # 'Voyageur-d8235afd822dbcbb3d7f3197785647294ab8941.wanadoo.fr',
+        # 'irc.multimondes.net', 'w0lfy', 'H', '0 boum']
+        #
+        # e.arguments()[0] = channel
+        # e.arguments()[1] = username
+        # @
+        # e.arguments()[2] = userhost
+        # e.arguments()[3] = server
+        # e.arguments()[4] = nickname
+        nickname = e.arguments()[4]
+        hostname = e.arguments()[2]
+        username = e.arguments()[1]
+        self.channel.set_userdetails(nickname, [username, hostname])
+
+    def on_namreply(self, c, e):
+        nicklist = e.arguments()[2].split()
+        for user in self.users.find({'loggedin': True}):
+            if not self.channels[chan].has_user(user['nickname']):
+                self.users.update({'_id': user['_id']},
+                                    {'$set': {'loggedin': False}})
+                # TODO trigger a quit Penalty
+                pass
+            else:
+                self.loggedIn.append(Character(
+
+    def on_pubmsg(self, c, e):
+        # will handle public messages
+        source = nm_to_n(e.source())
+        if len(e.arguments()) == 1:
+            body = e.arguments()[0]
+        elif e.arguments()[0] == 'ACTION': # ctcp ACTION
+            body = source + " " + e.arguments()[1]
+        else: # ignore everything else
+            return
+
+    def on_privmsg(self, c, e):
+        # will handle private messages
+        source = nm_to_n(e.source())
+        if len(e.arguments()) == 1:
+            body = e.arguments()[0]
+        else:
+            return
+
+        if not e.source() in self.ownermask and source in self.owners:
+            self.ownermask.append(e.source())
+            print('Locked on %s. Waiting orders ...' % e.source())
+
+        body = self.cleanUpMsg(body)
+
+        commands = body.split()
+        commands[0] = commands[0].lower()
+
+        if source in self.owners:
+            virtualEvent = self._privVirtualEvent + self._pubVirtualEvent
+        else:
+            virtualEvent = self._pubVirtualEvent
+
+        if commands[0] in virtualEvent:
+            m = 'on_priv_' + commands[0]
+            if hasattr(self, m):
+                getattr(self, m)(c, e)
+            else:
+                c.privmsg(source, """Sorry, this feature is not currently
+                        implemented""")
+
+        eventtype = c
+        method = "on_" + eventtype
+
+    def on_part(self, c, e):
+        # do a P350 if logged in
+        pass
+
+    def on_quit(self, c, e):
+        # do a P30 if logged in
+        pass
+
+    # virtual events
+    def on_logout(self, c, e):
+        # do a P20
+        pass
+
+    def on_login(self, c, e):
+        pass
+
+    def __removeColorCode(self, body):
+        # remove irc color char \x03nn,nn[text]\x03
+        if "\x03" in body:
+            start = body.find('\x03')
+            if start+1 == len(body):
+                x = start+1
+            for x in xrange(start+1, len(body)):
+                if not ((start>0 and start+5-x<=start or start == 0 and start-x >= -5) \
+                        and body[x].isdigit() or (body[x] is ',' and body[x+1].isdigit())):
+                    break
+    #        if start == 0:
+    #            body = body[:start] + body[x:]
+    #        else:
+            body = body[:start] + body[x:]
+            body = self.__removeColorCode(body)
+        return body
+
+    def __cleanUpMsg(self, body):
+        body = self.__removeColorCode(body)
+        #remove special irc fonts chars
+        body = body.replace("\x02",'')
+        body = body.replace("\xa0",'')
+        return body
+
+class Character:
+    def __init__(self, data):
+        self.equipment = {
+                'amulet': (0, None),
+                'boots': (0, None),
+                'charm': (0, None),
+                'glove': (0, None),
+                'helm': (0, None),
+                'leggings': (0, None),
+                'ring': (0, None),
+                'shield': (0, None),
+                'tunic': (0, None),
+                'weapon': (0, None)
+                }
+        self.total_idle_time = 0
+
+    def getGlobalDescript(self):
+        pass
+    def hipDescript(self):
+        pass
+
+if __name__ == "__main__":
+    import argparse
+    parser = argparse.ArgumentParser(description="Another IdleRPG irc bot.")
+    parser.add_argument('-s', '--server', metavar='SERVERNAME',
+                        help='Server address to connect to')
+    parser.add_argument('-p', '--port', metavar='PORT', default=6667
+                        help='Port number to connect to')
+    parser.add_argument('-c', '--channel', metavar='CHANNEL'
+                        help='Join CHANNEL on connect')
+    parser.add_argument('-v', '--verbose', action='store_true',
+                        help='Set the verbosity level to verbose')
+    parser.add_argument('configFile', metavar='CONFIG', narg='?',
+                        type=argparse.FileType('r')
+                        help='Configuration parameters in yaml format')
+    args = parser.parse_args()
+
+    if args.configFile is not None:
+        config = yaml.load(args.configFile.read())
+        config.setdefault('channels', [])
+        config.setdefault('owners', [])
+        config.setdefault('nickname', 'pyIdleRPG')
+        config.setdefault('verbose', args.verbose)
+    else:
+        config = {'servers': [],
+                  'channels': [],
+                  'nickname': 'pyIdleRPG',
+                  'verbose': args.verbose}
+
+    if args.server is not None:
+        config['servers'].append((args.server, args.port))
+    elif len(config['servers']) == 0:
+        ArgumentParser.error('No server configured.')
+
+    if args.channel is not None:
+        config['channels'].append(args.channel)
+    elif len(config['channels']) == 0:
+        argumentParser.error('No channel configured.')
+
+    myBot = IdleRPG(config)
+
+    try:
+        myBot.our_start()
+    except KeyboardInterrupt, e:
+        myBot.settings['quitmsg'] = "Bot ended by keyboard request."
+        pass
+    except SystemExit, e:
+        myBot.settings['quitmsg'] = "System going for maintenance."
+        pass
+    except:
+        traceback.print_exc()
+        # try to disconnect
+        myBot.disconnect()
+        exit(0)
+
+    myBot.disconnect('EOF')
