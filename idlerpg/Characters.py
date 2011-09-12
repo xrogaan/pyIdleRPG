@@ -17,6 +17,7 @@ Character:
 
 from hashlib import sha1
 from types import *
+from time import time
 
 def validateEmail(email):
     import re
@@ -52,10 +53,11 @@ class Character:
                 return -1
             method='autoload'
         else:
-           cdata = self._myCollection.find_one({'character_name': cname:
+            cdata = self._myCollection.find_one({'character_name': cname:
                                                 'password': sha1(password)})
             method='loggin'
 
+        self.initialized_at = time()
         self.load(cdata,method)
 
     def load(self, characterData, method):
@@ -143,10 +145,17 @@ class Character:
             level+=1
         return level
 
+    def getEquipmentSum(self):
+        data = self._myCollection().find(
+                {'_id': self._myId},
+                {'_id': 0, 'equipment': 1})
+        esum = sum([item['power'] for item in data['equipment'].itervalues()])
+        return esum
+
     def levelUp(self):
         self.level+= 1
         self.idle_time = 0
-        self._myCollection.update({'character_name': self.characterName},
+        self._myCollection.update({'_id': self.myId},
                                    {'$inc': {'level': 1
                                              'total_idle': self.idle_time},
                                     '$set': {'idle_time': 0,
@@ -161,7 +170,7 @@ class Character:
                                    {'$set': {'character_name': newName})
         self.characterName = newName
 
-    def penalty(self, penalty, messagelenght=None):
+    def penalty(self, penalty=0, messagelenght=None):
         """
         increment the time to idle to next level by M*(1.4**LEVEL)
         """
@@ -170,16 +179,16 @@ class Character:
         if messagelenght is not None and int(messagelenght) > 0:
             incrase = messagelenght * (1.14**int(self.level))
         else:
-        incrase = int(penalty) * (1.14**int(self.level))
+            incrase = int(penalty) * (1.14**int(self.level))
         self._myCollection.update({'character_name': self.characterName},
-                                   {'$inc': {'ttl': penalty})
+                                   {'$inc': {'ttl': incrase})
         return penalty
 
     def P(self, modifier):
         """
         alias for self.penalty
         """
-        return self.penalty(modifier)
+        return self.penalty(penalty=modifier)
 
     def updateBodypart(self, bodypID, value):
         mname = '__update_' + bodypID

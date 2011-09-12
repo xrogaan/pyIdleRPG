@@ -14,6 +14,7 @@ from pymongo import Connection, GEO2D
 
 class IdleRPG(SingleServerIRCBot):
     # virtual events are commands that can be handled by the bot
+    # privates= admins; public= anyone
     _privVirtualEvent = ['quit', 'doom']
     _pubVirtualEvent = ['whoami', 'register', 'login', 'logout',
                         'newpass', 'removeme', 'align', 'status',
@@ -25,6 +26,7 @@ class IdleRPG(SingleServerIRCBot):
         self.db = Connection().pyIdleRPG
         self.users = self.db['users']
         self.userBase = dict()
+        self._gameChannel = ''
         # users schema: fullhost, nickname, password, characterName,
         #               email, loggedin
         # Todo: on channel join, ensure logged in status
@@ -33,14 +35,15 @@ class IdleRPG(SingleServerIRCBot):
         SingleServerIRCBot.__init__(self, self.settings['servers'],
                                     self.settings['nickname'],
                                     self.settings['nickname'])
-        SingleServerIRCBot.start()
+        self.start()
 
     def _initialyseplayers(self, channel):
-        for ch in self.channels.values():
-            for (nickname, details) in ch.userdict.iteritems():
-                self.userBase[nickname] = Character(nickname,
-                                                    details[1],
-                                                    details[2])
+        ch = self.channels[channel]
+        for (nickname, details) in ch.userdict.iteritems():
+            self.userBase[nickname] = Character(nickname,
+                                                details[0],
+                                                details[1],
+                                                self.users)
 
     def is_loggedIn(self, nickname):
         if self.userBase.has_key(nickname):
@@ -56,10 +59,14 @@ class IdleRPG(SingleServerIRCBot):
         print("Joining channels...")
         print(self.settings['channels'])
         for channel in self.settings['channels']:
+            if type(channel) is not type(''):
+                channel = channel[0]
+                self._gameChannel = channel
             c.join(channel)
             sleep(1)
-            c.who(channel)
-            self._initialyseplayers(channel)
+            if (channel is self._gameChannel):
+                c.who(channel)
+                self._initialyseplayers(channel)
 #            c.names(chan) # will trigger a namreply event
 
     def on_whoreply(self, c, e):
@@ -82,21 +89,16 @@ class IdleRPG(SingleServerIRCBot):
         self.channel.set_userdetails(nickname, [username, hostname])
 
     def on_namreply(self, c, e):
-        nicklist = e.arguments()[2].split()
-        for user in self.users.find({'loggedin': True}):
-            if not self.channels[chan].has_user(user['nickname']):
-                self.users.update({'_id': user['_id']},
-                                    {'$set': {'loggedin': False}})
-                # TODO trigger a quit Penalty
-                pass
-            else:
-                self.loggedIn.append(Character(
+        pass
 
     def on_pubmsg(self, c, e):
         # will handle public messages
         source = nm_to_n(e.source())
+        if not self.is_loggedIn(source):
+            return
         if len(e.arguments()) == 1:
             body = e.arguments()[0]
+            self.userBase[source].penalty(messagelenght=len(body))
         elif e.arguments()[0] == 'ACTION': # ctcp ACTION
             body = source + " " + e.arguments()[1]
         else: # ignore everything else
@@ -120,12 +122,12 @@ class IdleRPG(SingleServerIRCBot):
         commands[0] = commands[0].lower()
 
         if source in self.owners:
-            virtualEvent = self._privVirtualEvent + self._pubVirtualEvent
+            virtualEvents = self._privVirtualEvent + self._pubVirtualEvent
         else:
-            virtualEvent = self._pubVirtualEvent
+            virtualEvents = self._pubVirtualEvent
 
-        if commands[0] in virtualEvent:
-            m = 'on_priv_' + commands[0]
+        if commands[0] in virtualEvents:
+            m = 'on_virt_' + commands[0]
             if hasattr(self, m):
                 getattr(self, m)(c, e)
             else:
@@ -137,22 +139,43 @@ class IdleRPG(SingleServerIRCBot):
 
     def on_part(self, c, e):
         # do a P350 if logged in
-        pass
+        source = nm_to_n(e.source())
+        if self.is_loggedIn(source):
+            self.userBase[source].P(350)
 
     def on_quit(self, c, e):
         # do a P30 if logged in
-        pass
+        source = nm_to_n(e.source())
+        if self.is_loggedIn(source):
+            self.userBase[source].P(30)
 
     # virtual events
-    def on_logout(self, c, e):
+    def on_virt_logout(self, c, e):
         # do a P20
-        pass
+        source = nm_to_n(e.source())
+        self.userBase[source].P(20)
 
-    def on_login(self, c, e):
-        pass
+    def on_virt_login(self, c, e):
+        source = nm_to_n(e.source())
+        args = e.arguments()[0].split('')
+        if (len(args)<3):
+            c.privmsg(source, 'Not enough arguments.')
+            return
+        name, password = args[1], args[2]
+        udetails = self.channels[self._gameChannel].userdict[source]
+        self.userBase[source] = Character(source,
+                                          udetails[0],
+                                          udetails[1],
+                                          self.users,
+                                          cname=name,
+                                          password=password)
+        c.privmsg(source, 'Welcome '+source+'.')
 
     def __removeColorCode(self, body):
-        # remove irc color char \x03nn,nn[text]\x03
+        """
+        Remove irc color char if it's starting a chain
+        """
+        # remove irc color char \x03nn,nnTEXT\x03
         if "\x03" in body:
             start = body.find('\x03')
             if start+1 == len(body):
