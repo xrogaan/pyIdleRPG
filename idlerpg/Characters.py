@@ -1,4 +1,4 @@
-# -*- charset: utf-8 -*-
+# -*- coding: utf-8 -*-
 # vim:set shiftwidth=4 tabstop=4 expandtab textwidth=80:
 """
 TEST check on __init__ if the player is already connected.

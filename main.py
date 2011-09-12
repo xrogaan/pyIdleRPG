@@ -1,5 +1,5 @@
 #!/usr/bin/env python2
-# -*- charset: utf-8 -*-
+# -*- coding: utf-8 -*-
 # vim:set shiftwidth=4 tabstop=4 expandtab textwidth=80:
 
 version= 0,1,0
@@ -224,14 +224,14 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Another IdleRPG irc bot.")
     parser.add_argument('-s', '--server', metavar='SERVERNAME',
                         help='Server address to connect to')
-    parser.add_argument('-p', '--port', metavar='PORT', default=6667
+    parser.add_argument('-p', '--port', metavar='PORT', default=6667,
                         help='Port number to connect to')
-    parser.add_argument('-c', '--channel', metavar='CHANNEL'
+    parser.add_argument('-c', '--channel', metavar='CHANNEL',
                         help='Join CHANNEL on connect')
     parser.add_argument('-v', '--verbose', action='store_true',
                         help='Set the verbosity level to verbose')
-    parser.add_argument('configFile', metavar='CONFIG', narg='?',
-                        type=argparse.FileType('r')
+    parser.add_argument('configFile', metavar='CONFIG', nargs='?',
+                        type=argparse.FileType('r'),
                         help='Configuration parameters in yaml format')
     args = parser.parse_args()
 
@@ -250,7 +250,7 @@ if __name__ == "__main__":
     if args.server is not None:
         config['servers'].append((args.server, args.port))
     elif len(config['servers']) == 0:
-        ArgumentParser.error('No server configured.')
+        parser.error('No server configured.')
 
     if args.channel is not None:
         config['channels'].append(args.channel)
