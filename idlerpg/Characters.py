@@ -104,7 +104,7 @@ class Character:
                 {'$set': data})
         return 1
 
-    def createNew(self, myCollection, cname, password, email, gender=0):
+    def createNew(self, myCollection, cname, password, email, charClass, gender=0):
         if self.empty is not True:
             return -1
 
@@ -137,6 +137,7 @@ class Character:
                             'password': password,
                             'email': email,
                             'gender': gender,
+                            'class': charClass,
                             'level': 1,
                             'registeredat': time.time()
                             'ttl': self._ttl(1)

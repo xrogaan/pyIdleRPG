@@ -37,7 +37,7 @@ class IdleRPG(SingleServerIRCBot):
                                     self.settings['nickname'])
         self.start()
 
-    def _initialyseplayers(self, channel):
+    def _initialysePlayers(self, channel):
         ch = self.channels[channel]
         for (nickname, details) in ch.userdict.iteritems():
             self.userBase[nickname] = Character(nickname,
@@ -66,7 +66,7 @@ class IdleRPG(SingleServerIRCBot):
             sleep(1)
             if (channel is self._gameChannel):
                 c.who(channel)
-                self._initialyseplayers(channel)
+                self._initialysePlayers(channel)
 #            c.names(chan) # will trigger a namreply event
 
     def on_whoreply(self, c, e):
@@ -150,17 +150,46 @@ class IdleRPG(SingleServerIRCBot):
             self.userBase[source].P(30)
 
     # virtual events
+    def on_virt_register(self, c, e):
+        source = nm_to_n(e.source())
+        if self.userBase[source] is not -1:
+            c.privmsg('You\' already got cookies.')
+            return
+
+        args = self.__getArgs()
+        if len(args) < 4:
+            return -1
+
+        charName, charPassword, charClass = args[0], args[1], args[2]
+        if len(args) is 4:
+            email = args[3]
+            gender = 0
+        else:
+            gender, email = args[3], args[4]
+            if gender is not in [0,1,2]:
+                gender = 0
+
+        self.userBase[source].createNew(
+
     def on_virt_logout(self, c, e):
         # do a P20
         source = nm_to_n(e.source())
         self.userBase[source].P(20)
+        self.userBase[source].unload()
+        del self.userBase[source]
+        self.userBase[source] = -1
 
     def on_virt_login(self, c, e):
         source = nm_to_n(e.source())
-        args = e.arguments()[0].split('')
-        if (len(args)<3):
+        args = self.__getArgs()
+        if len(args)<3:
             c.privmsg(source, 'Not enough arguments.')
             return
+
+        if self.userBase[source] is -1:
+            c.privmsg(source, 'We also got icecream.')
+            return
+
         name, password = args[1], args[2]
         udetails = self.channels[self._gameChannel].userdict[source]
         self.userBase[source] = Character(source,
@@ -198,26 +227,8 @@ class IdleRPG(SingleServerIRCBot):
         body = body.replace("\xa0",'')
         return body
 
-class Character:
-    def __init__(self, data):
-        self.equipment = {
-                'amulet': (0, None),
-                'boots': (0, None),
-                'charm': (0, None),
-                'glove': (0, None),
-                'helm': (0, None),
-                'leggings': (0, None),
-                'ring': (0, None),
-                'shield': (0, None),
-                'tunic': (0, None),
-                'weapon': (0, None)
-                }
-        self.total_idle_time = 0
-
-    def getGlobalDescript(self):
-        pass
-    def hipDescript(self):
-        pass
+    def __getArgs(self, event):
+        return event.arguments()[0].split('')
 
 if __name__ == "__main__":
     import argparse
