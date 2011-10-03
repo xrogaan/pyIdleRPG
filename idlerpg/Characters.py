@@ -61,6 +61,9 @@ class Character:
         self.load(cdata,method)
 
     def load(self, characterData, method):
+        """
+        Load userdata in memory
+        """
         if method == 'loggin':
             toUpdate = {}
             if characterData['nickname'] is not self.nickname:
@@ -70,7 +73,7 @@ class Character:
                 toUpdate.update({'hostname': self.hostname})
                 characterData['hostname'] = self.hostname
             if len(toUpdate) > 0:
-                myCollection.update({'_id': characterData['_id']},
+                self._myCollection.update({'_id': characterData['_id']},
                                     {'$set': toUpdate})
 
         self._myId = characterData['_id']
@@ -89,6 +92,17 @@ class Character:
         self.empty = False
         return 1
 
+    def unload(self):
+        """
+        Commit everything into the database
+        """
+        data = {'total_idle': self.total_idle,
+                'level': self.level,
+                'idle_time': self.idle_time}
+
+        self._myCollection.update({'_id': self._myId},
+                {'$set': data})
+        return 1
 
     def createNew(self, myCollection, cname, password, email, gender=0):
         if self.empty is not True:
