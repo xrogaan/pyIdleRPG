@@ -54,7 +54,7 @@ class IdleRPG(SingleServerIRCBot):
     def daemon_increaseTTL(self, seconds):
         for (nickname, user) in self.userBase.iteritems():
             if not user.empty:
-                user.increaseTTL(seconds)
+                user.increaseIdleTime(seconds)
 
     def on_nicknameinuse(self, c, e):
         self.settings['nickname'] = c.get_nickname() + "_"

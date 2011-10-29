@@ -144,23 +144,25 @@ class Character:
         self._myId = myCollection.insert(myCharacter)
         return 1
 
-    def increaseTTL(self, ittl):
-        pass
+    def increaseIdleTime(self, ittl):
+        cttl = self.getTTL()
+        if cttl['ttl'] >= self.idle_time+5:
+            # LEVEL UP
+            self.levelUp()
+        else:
+            self._myCollection.update('_id': self._myId,
+                    {$inc: {'idle_time': ittl}})
+            self.idle_time+=ittl
 
     def getTTL(self, level=None):
         """
-        return the Time To Level for a specified level
+        return the Time To Level for a specified level or return the
+        current ttl from the database.
         """
-        level = level if level is not None else self.level
-        return int(600*(1.16**level))
-
-    def getLevel(self, idletime=None):
-        idletime = idletime if idletime is not None else self.total_idle
-        level = 1
-        while idletime > -1:
-            idletime-= self.getTTL(level)
-            level+=1
-        return level
+        if level is None:
+            return self._myCollection.findone({'_id': self._myId}, {'ttl': 1})
+        else:
+            return int(600*(1.16**level))
 
     def getEquipmentSum(self):
         data = self._myCollection().find(
@@ -171,13 +173,13 @@ class Character:
 
     def levelUp(self):
         self.level+= 1
-        self.idle_time = 0
         self._myCollection.update({'_id': self.myId},
                                    {'$inc': {'level': 1
                                              'total_idle': self.idle_time},
                                     '$set': {'idle_time': 0,
-                                             'ttl': self._ttl()}}
+                                             'ttl': self.getTTL(self.level)}}
                                   )
+        self.idle_time = 0
         return 1
 
     def rename(self, newName):
