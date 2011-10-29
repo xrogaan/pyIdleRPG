@@ -1,0 +1,42 @@
+character_name: !!python/none
+character_class: !!python/none
+nickname: !!python/none
+hostname: !!python/none
+password: !!python/none
+email: !!python/none
+gender: !!python/none
+ttl: !!python/none
+registeredat: 0
+total_idle: 0
+idle_time: 0
+equipment:
+  leggings:
+    power: 0
+    name !!python/none
+  tunic:
+    power: 0
+    name !!python/none
+  weapon:
+    power: 0
+    name !!python/none
+  ring:
+    power: 0
+    name !!python/none
+  shield:
+    power: 0
+    name !!python/none
+  amulet:
+    power: 0
+    name !!python/none
+  helm:
+    power: 0
+    name !!python/none
+  charm:
+    power: 0
+    name !!python/none
+  boots:
+    power: 0
+    name !!python/none
+  gloves:
+    power: 0
+    name !!python/none
