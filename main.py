@@ -6,7 +6,7 @@ version= 0,1,0
 
 import sys
 import traceback
-from time import sleep
+from time import sleep, time
 
 from ircbot import SingleServerIRCBot
 from irclib import nm_to_n, nm_to_uh, nm_to_h
@@ -51,6 +51,11 @@ class IdleRPG(SingleServerIRCBot):
                return True
         return False
 
+    def daemon_increaseTTL(self, seconds):
+        for (nickname, user) in self.userBase.iteritems():
+            if not user.empty:
+                user.increaseTTL(seconds)
+
     def on_nicknameinuse(self, c, e):
         self.settings['nickname'] = c.get_nickname() + "_"
         c.nick(self.settings['nickname'])
@@ -68,6 +73,7 @@ class IdleRPG(SingleServerIRCBot):
                 c.who(channel)
                 self._initialysePlayers(channel)
 #            c.names(chan) # will trigger a namreply event
+        self.execute_delayed(15, self.daemon_increaseTTL, 15)
 
     def on_whoreply(self, c, e):
         """
@@ -153,7 +159,7 @@ class IdleRPG(SingleServerIRCBot):
     def on_virt_register(self, c, e):
         source = nm_to_n(e.source())
         if self.userBase[source] is not -1:
-            c.privmsg('You\' already got cookies.')
+            c.privmsg('You\'ve already got cookies.')
             return
 
         args = self.__getArgs()
@@ -169,7 +175,17 @@ class IdleRPG(SingleServerIRCBot):
             if gender is not in [0,1,2]:
                 gender = 0
 
-        self.userBase[source].createNew(
+        template = {'character_name': charName,
+                    'character_class': charClass,
+                    'nickname': source,
+                    'password': charPassword,
+                    'email': email,
+                    'gender': gender,
+                    'hostname': nm_to_h(e.source())}
+
+        answer = self.userBase[source].createNew(self.users, **template)
+        if answer is 1:
+            c.privmsg(source, "You've been successfully registred. You can now login.")
 
     def on_virt_logout(self, c, e):
         # do a P20

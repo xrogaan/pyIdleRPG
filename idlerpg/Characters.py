@@ -41,7 +41,6 @@ class Character:
         self.nickname = nickname
         self.hostname = hostname
         self.equipment = {}
-        self._mother = talkBack
         self._myCollection = myCollection
 
         if cname is None:
@@ -49,16 +48,15 @@ class Character:
                                                  'hostname': self.hostname,
                                                  'username': self.username,
                                                  'loggedin': True})
-            if len(cdata) == 0:
-                return -1
             method='autoload'
         else:
             cdata = self._myCollection.find_one({'character_name': cname:
                                                 'password': sha1(password)})
             method='loggin'
 
-        self.initialized_at = time()
-        self.load(cdata,method)
+        if len(cdata) > 0:
+            self.empty = False
+            self.load(cdata,method)
 
     def load(self, characterData, method):
         """
@@ -104,7 +102,8 @@ class Character:
                 {'$set': data})
         return 1
 
-    def createNew(self, myCollection, cname, password, email, charClass, gender=0):
+    def createNew(self, myCollection, character_name, character_class,
+                        nickname, hostname password, email, gender=0):
         if self.empty is not True:
             return -1
 
@@ -113,7 +112,7 @@ class Character:
             email=None
 
         # find twins
-        haveTwin = myCollection.find_one({'character_name': cname})
+        haveTwin = myCollection.find_one({'character_name': character_name})
         if haveTwin is not None:
             return 0
 
@@ -131,19 +130,22 @@ class Character:
         with file('character.yaml','r') as stream:
             myCharacter = yaml.load(stream)
 
-        myCharacter.save({'character_name': cname,
-                            'nickname': self.nickname,
-                            'hostname': self.user_host,
+        myCharacter.save({'character_name': character_name,
+                            'nickname': nickname,
+                            'hostname': hostname,
                             'password': password,
                             'email': email,
                             'gender': gender,
-                            'class': charClass,
+                            'class': chararcter_class,
                             'level': 1,
                             'registeredat': time.time()
                             'ttl': self._ttl(1)
                             })
         self._myId = myCollection.insert(myCharacter)
         return 1
+
+    def increaseTTL(self, ittl):
+        pass
 
     def getTTL(self, level=None):
         """
