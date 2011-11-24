@@ -48,15 +48,24 @@ class Character:
                                                  'hostname': self.hostname,
                                                  'username': self.username,
                                                  'loggedin': True})
-            method='autoload'
+            if len(cdata) > 0:
+                self.empty = False
+                self.load(cdata,'autoload')
         else:
-            cdata = self._myCollection.find_one({'character_name': cname:
-                                                'password': sha1(password)})
-            method='loggin'
+            self.loggin_in(cname, password)
+
+
+    def loggin_in(self, character_name, password):
+        cdata = self._myCollection.find_one({
+            'character_name': character_name,
+            'password': sha1(password)
+            })
 
         if len(cdata) > 0:
             self.empty = False
-            self.load(cdata,method)
+            self.load(cdata, 'loggin')
+            return 1
+        return -1
 
     def load(self, characterData, method):
         """
@@ -103,7 +112,8 @@ class Character:
         return 1
 
     def createNew(self, myCollection, character_name, character_class,
-                        nickname, hostname password, email, gender=0):
+                        nickname, hostname password, email, gender=0,
+                        align=0):
         if self.empty is not True:
             return -1
 
@@ -138,8 +148,9 @@ class Character:
                             'gender': gender,
                             'class': chararcter_class,
                             'level': 1,
-                            'registeredat': time.time()
-                            'ttl': self._ttl(1)
+                            'registeredat': time.time(),
+                            'ttl': self._ttl(1),
+                            'alignment': 0 if align not in [-1,0,1] else align
                             })
         self._myId = myCollection.insert(myCharacter)
         return 1
@@ -185,8 +196,8 @@ class Character:
     def rename(self, newName):
         if self.empty:
             return 0
-        self._myCollection.update({'character_name': self.characterName},
-                                   {'$set': {'character_name': newName})
+        self._myCollection.update({'_id': self.myId},
+                                   {'$set': {'character_name': newName}})
         self.characterName = newName
 
     def penalty(self, penalty=0, messagelenght=None):
@@ -196,11 +207,11 @@ class Character:
         if self.empty:
             return 0
         if messagelenght is not None and int(messagelenght) > 0:
-            incrase = messagelenght * (1.14**int(self.level))
-        else:
-            incrase = int(penalty) * (1.14**int(self.level))
+            penalty = int(messagelenght)
+
+        increase = int(penalty) * (1.14**int(self.level))
         self._myCollection.update({'character_name': self.characterName},
-                                   {'$inc': {'ttl': incrase})
+                                   {'$inc': {'ttl': increase})
         return penalty
 
     def P(self, modifier):
@@ -236,8 +247,23 @@ class Character:
     def get_hostname(self):
         return self.user_host
 
+    def get_level(self):
+        return self.level
+
+    def get_ttl(self):
+        """
+        return the time to level. Alias of getTTL
+        """
+        return self.getTTL()
+
+    def get_alignment(self):
+        pass
+
     def get_equipment(self, key=None):
         if key is not None:
             return self.equipment.get(key, 0)
         else:
             return self.equipment.items()
+
+    def set_alignment(self, align):
+        self._myCollection.update({'_id': self.myId}, {'align': align})
