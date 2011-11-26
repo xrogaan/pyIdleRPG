@@ -96,6 +96,7 @@ class Character:
         self.idle_time = characterData['idle_time']
         self.total_idle = characterData['total_idle']
         self.level = characterData['level']
+        self.alignment = characterData['alignement']
         self.empty = False
         return 1
 
@@ -132,7 +133,7 @@ class Character:
         import random
         import time
 
-        if len(int(gender))>1 or (gender is 0 or gender is not in [1,2]):
+        if int(gender) not in [1,2]:
             gender = random.randrange(1,2)
 
         password = sha1(password).hexdigest()
@@ -210,8 +211,8 @@ class Character:
             penalty = int(messagelenght)
 
         increase = int(penalty) * (1.14**int(self.level))
-        self._myCollection.update({'character_name': self.characterName},
-                                   {'$inc': {'ttl': increase})
+        self._myCollection.update({'_id': self.myId},
+                                   {'$inc': {'ttl': increase}})
         return penalty
 
     def P(self, modifier):
@@ -228,14 +229,23 @@ class Character:
             pass
 
     def updateEquipment(self, equipKey, value, name=None):
-        updateValue = {'equipment.'+equipKey: {'power': value, 'name': name}}
-        self._myCollection.update({'character_name': self.characterName,
-                                   'equipment.'+equipKey+'.power': {'$lt': value}},
-                                  updateValue,
-                                  false)
+        res = self._myCollection.update(
+            {
+                '_id': self.myId,
+                'equipment.'+equipKey+'.power': {'$lt': value}
+            },
+            {
+                '$set': {
+                    'equipment.'+equipKey+'.power': value,
+                    'equipment.'+equipKey+.'name': name
+                    }
+                }, safe=true)
+        if res['updatedExisting'] is False:
+            return -1
         # TODO: Checking the Outcome of an Update Request
         # http://www.mongodb.org/display/DOCS/Updating#Updating-CheckingtheOutcomeofanUpdateRequest
         self.equipment[equipKey] = (value, name)
+        return 1
 
 
     def get_characterName(self):
@@ -257,7 +267,7 @@ class Character:
         return self.getTTL()
 
     def get_alignment(self):
-        pass
+        return self.alignment
 
     def get_equipment(self, key=None):
         if key is not None:
@@ -266,4 +276,29 @@ class Character:
             return self.equipment.items()
 
     def set_alignment(self, align):
-        self._myCollection.update({'_id': self.myId}, {'align': align})
+        self._myCollection.update(
+                {'_id': self.myId},
+                {'$set': {'alignment': align}})
+        return 1
+
+    def set_gender(self, gender):
+        if int(gender) not in [1, 2]:
+            return -1
+        self._myCollection.update(
+                {'_id': self.myId},
+                {'$set':{'gender': gender}})
+        return 1
+
+    def set_email(self, email):
+        if validateEmail(email) is 1:
+            self._myCollection.update(
+                    {'_id': self.myId},
+                    {'$set': {'email': email}})
+
+    def set_password(self, password, oldpassword):
+        self._myCollection.update(
+                {
+                    '_id': self.myId,
+                    'password': sha1(oldpassword).hexdigest()
+                    },
+                {'password': sha1(password).hexdigest()}, safe=true)
