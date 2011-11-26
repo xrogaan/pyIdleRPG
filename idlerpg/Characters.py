@@ -13,6 +13,9 @@ Character:
     __init__(cname, chost, cequipment, cbody)
     updateBodyPart(bodyPartId, +/-Float, Collection)
     updateEquipment(equipmentKey, +/-Int, Name=None, Collection)
+
+Equipment data format:
+    {'equipment': [{'type': 'boots', 'name': 'Leather Boots', 'power': 10}]}
 """
 
 from hashlib import sha1
@@ -54,6 +57,9 @@ class Character:
         else:
             self.loggin_in(cname, password)
 
+    def __db_update(self, spec, document):
+        res = self._myCollection.update(spec, document, safe=True)
+        return res['updatedExisting']
 
     def loggin_in(self, character_name, password):
         cdata = self._myCollection.find_one({
@@ -85,11 +91,12 @@ class Character:
 
         self._myId = characterData['_id']
         # TODO verify if loading the equipment in memory is really needed
-        for key in self._equipmentKeys:
-            if not characterData['equipment'].has_key(key):
+        for item in characterData['equipment']:
+            if item['type'] not in self._equipmentKeys:
+                # uh ho, I don't know that kind of item ...
                 pass
-            val = characterData['equipment'][key]
-            self.equipment.update({key: val})
+            self.equipment.update({item['type']: {'name': item['name'],
+                                                  'power': item['power']}})
 
         self.characterName = characterData['character_name']
         self.registeredat = characterData['registeredat']
@@ -177,11 +184,10 @@ class Character:
             return int(600*(1.16**level))
 
     def getEquipmentSum(self):
-        data = self._myCollection().find(
+        data = self._myCollection.find_one(
                 {'_id': self._myId},
-                {'_id': 0, 'equipment': 1})
-        esum = sum([item['power'] for item in data['equipment'].itervalues()])
-        return esum
+                {'equipment': 1})
+        return sum([item['power'] for item in data['equipment']])
 
     def levelUp(self):
         self.level+= 1
