@@ -90,6 +90,9 @@ class Character:
                                     {'$set': toUpdate})
 
         self._myId = characterData['_id']
+        # equipment shouldn't be None, but just in case.
+        if characterData['equipment'] is None:
+            characterData['equipment'] = []
         # TODO verify if loading the equipment in memory is really needed
         for item in characterData['equipment']:
             if item['type'] not in self._equipmentKeys:
@@ -168,10 +171,13 @@ class Character:
         if cttl['ttl'] >= self.idle_time+5:
             # LEVEL UP
             self.levelUp()
+            return {'level': self.level, 'nextl': self.getTTL(),
+                    'cname': self.get_characterName()}
         else:
             self._myCollection.update('_id': self._myId,
                     {$inc: {'idle_time': ittl}})
             self.idle_time+=ittl
+            return 1
 
     def getTTL(self, level=None):
         """
@@ -179,7 +185,7 @@ class Character:
         current ttl from the database.
         """
         if level is None:
-            return self._myCollection.findone({'_id': self._myId}, {'ttl': 1})
+            return self._myCollection.find_one({'_id': self._myId}, {'ttl': 1})
         else:
             return int(600*(1.16**level))
 
@@ -282,29 +288,34 @@ class Character:
             return self.equipment.items()
 
     def set_alignment(self, align):
-        self._myCollection.update(
+        """
+        Return True if the alignement could be changed
+        Return -1 if the argument doesn't fit
+        Return False if the update process fail (this is really bad)
+        """
+        if align not in [-1,0,1]:
+            return -1
+        return self.__db_update(
                 {'_id': self.myId},
                 {'$set': {'alignment': align}})
-        return 1
 
     def set_gender(self, gender):
         if int(gender) not in [1, 2]:
             return -1
-        self._myCollection.update(
+        return self.__db_update(
                 {'_id': self.myId},
                 {'$set':{'gender': gender}})
-        return 1
 
     def set_email(self, email):
         if validateEmail(email) is 1:
-            self._myCollection.update(
+            return self.__db_update(
                     {'_id': self.myId},
                     {'$set': {'email': email}})
 
     def set_password(self, password, oldpassword):
-        self._myCollection.update(
+        return self.__db_update(
                 {
                     '_id': self.myId,
                     'password': sha1(oldpassword).hexdigest()
                     },
-                {'password': sha1(password).hexdigest()}, safe=true)
+                {'password': sha1(password).hexdigest()})

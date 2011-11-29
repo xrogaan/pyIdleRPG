@@ -54,7 +54,9 @@ class IdleRPG(SingleServerIRCBot):
     def daemon_increaseTTL(self, seconds):
         for (nickname, user) in self.userBase.iteritems():
             if not user.empty:
-                user.increaseIdleTime(seconds)
+                r = user.increaseIdleTime(seconds)
+                if r is not 1:
+                    self.on_player_levelup(**r)
 
     def on_nicknameinuse(self, c, e):
         self.settings['nickname'] = c.get_nickname() + "_"
@@ -215,6 +217,21 @@ class IdleRPG(SingleServerIRCBot):
                                           cname=name,
                                           password=password)
         c.privmsg(source, 'Welcome '+source+'.')
+
+    def on_player_levelup(self, cname, level, nextl):
+        from math import floor
+        if nextl >= 60*60*24:
+            days = int(floor(nextl / 60*60*24))
+        if nextl >= 60*60:
+            hours = int(floor(nextl / 60*60))
+        if nextl >= 60:
+            minutes = int(floor(nextl / 60))
+        seconds = int(floor(nextl))
+        nextl = "%d days, %d hours, %d minutes and %d seconds" % (days, hours,
+                                                            minutes, seconds)
+        levelup_txt= "%s, the %s, has attained level %s! Next level in %s."
+        c.privmsg(self._gameChannel,
+                  levelup_txt % {cname, cclass, level, nextl)
 
     def __removeColorCode(self, body):
         """
