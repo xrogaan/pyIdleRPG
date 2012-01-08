@@ -47,7 +47,7 @@ class IdleRPG(SingleServerIRCBot):
 
     def is_loggedIn(self, nickname):
         if self.userBase.has_key(nickname):
-           if self.userBase[nickname] is not -1:
+           if self.userBase[nickname].empty is not True:
                return True
         return False
 
@@ -137,7 +137,7 @@ class IdleRPG(SingleServerIRCBot):
         if commands[0] in virtualEvents:
             m = 'on_virt_' + commands[0]
             if hasattr(self, m):
-                if self.userBase[source] is -1 and commands[0] is not 'login':
+                if self.userBase[source].empty is True and commands[0] is not 'login':
                     c.privmsg(source, "You are not in the userbase.")
                     return
                 getattr(self, m)(c, e)
@@ -163,7 +163,7 @@ class IdleRPG(SingleServerIRCBot):
     # virtual events
     def on_virt_register(self, c, e):
         source = nm_to_n(e.source())
-        if self.userBase[source] is not -1:
+        if self.userBase[source] is not True:
             c.privmsg('You\'ve already got cookies.')
             return
 
@@ -198,7 +198,8 @@ class IdleRPG(SingleServerIRCBot):
         self.userBase[source].P(20)
         self.userBase[source].unload()
         del self.userBase[source]
-        self.userBase[source] = -1
+        # We need the object
+        #self.userBase[source] = -1
 
     def on_virt_login(self, c, e):
         source = nm_to_n(e.source())

@@ -88,6 +88,7 @@ class Character:
             if len(toUpdate) > 0:
                 self._myCollection.update({'_id': characterData['_id']},
                                     {'$set': toUpdate})
+                characterData.update(toUpdate)
 
         self._myId = characterData['_id']
         # equipment shouldn't be None, but just in case.
@@ -101,13 +102,8 @@ class Character:
             self.equipment.update({item['type']: {'name': item['name'],
                                                   'power': item['power']}})
 
-        self.characterName = characterData['character_name']
-        self.characterClass = characterData['character_class']
-        self.registeredat = characterData['registeredat']
-        self.idle_time = characterData['idle_time']
-        self.total_idle = characterData['total_idle']
-        self.level = characterData['level']
-        self.alignment = characterData['alignement']
+        del(characterData['equipment']
+        self.characterData = characterData
         self.empty = False
         return 1
 
@@ -115,12 +111,15 @@ class Character:
         """
         Commit everything into the database
         """
-        data = {'total_idle': self.total_idle,
-                'level': self.level,
-                'idle_time': self.idle_time}
+        data = {'total_idle': self.characterData['total_idle'],
+                'level': self.characterData['level'],
+                'idle_time': self.characterData['idle_time']}
 
         self._myCollection.update({'_id': self._myId},
                 {'$set': data})
+        self.characterData = {}
+        self.equipment = {}
+        self.empty = True
         return 1
 
     def createNew(self, myCollection, character_name, character_class,
@@ -170,15 +169,15 @@ class Character:
 
     def increaseIdleTime(self, ittl):
         cttl = self.getTTL()
-        if cttl >= self.idle_time+5:
+        if cttl >= self.characterData['idle_time']+5:
             # LEVEL UP
             self.levelUp()
-            return {'level': self.level, 'nextl': self.getTTL(),
+            return {'level': self.characterData['level'], 'nextl': self.getTTL(),
                     'cname': self.get_characterName()}
         else:
             self._myCollection.update('_id': self._myId,
                     {$inc: {'idle_time': ittl}})
-            self.idle_time+=ittl
+            self.characterData['idle_time']+=ittl
             return 1
 
     def getTTL(self, level=None):
@@ -198,14 +197,14 @@ class Character:
         return sum([item['power'] for item in data['equipment']])
 
     def levelUp(self):
-        self.level+= 1
+        self.characterData['level']+= 1
         self._myCollection.update({'_id': self.myId},
                                    {'$inc': {'level': 1
-                                             'total_idle': self.idle_time},
+                                             'total_idle': self.characterData['idle_time']},
                                     '$set': {'idle_time': 0,
-                                             'ttl': self.getTTL(self.level)}}
+                                             'ttl': self.getTTL(self.characterData['level'])}}
                                   )
-        self.idle_time = 0
+        self.characterData['idle_time'] = 0
         return 1
 
     def rename(self, newName):
@@ -213,7 +212,7 @@ class Character:
             return 0
         self._myCollection.update({'_id': self.myId},
                                    {'$set': {'character_name': newName}})
-        self.characterName = newName
+        self.characterData['character_name'] = newName
 
     def penalty(self, penalty=0, messagelenght=None):
         """
@@ -224,7 +223,7 @@ class Character:
         if messagelenght is not None and int(messagelenght) > 0:
             penalty = int(messagelenght)
 
-        increase = int(penalty) * (1.14**int(self.level))
+        increase = int(penalty) * (1.14**int(self.characterData['level']))
         self._myCollection.update({'_id': self.myId},
                                    {'$inc': {'ttl': increase}})
         return penalty
@@ -262,10 +261,10 @@ class Character:
         return 1
 
     def get_characterClass(self):
-        return self.characterClass
+        return self.characterData['character_class']
 
     def get_characterName(self):
-        return self.characterName
+        return self.characterData['character_name']
 
     def get_nickname(self):
         return self.nickname
@@ -274,7 +273,7 @@ class Character:
         return self.user_host
 
     def get_level(self):
-        return self.level
+        return self.characterData['level']
 
     def get_ttl(self):
         """
@@ -283,7 +282,7 @@ class Character:
         return self.getTTL()
 
     def get_alignment(self):
-        return self.alignment
+        return self.characterData['alignment']
 
     def get_equipment(self, key=None):
         if key is not None:
@@ -293,7 +292,7 @@ class Character:
 
     def set_alignment(self, align):
         """
-        Return True if the alignement could be changed
+        Return True if the alignment could be changed
         Return -1 if the argument doesn't fit
         Return False if the update process fail (this is really bad)
         """
