@@ -137,7 +137,7 @@ class IdleRPG(SingleServerIRCBot):
         if commands[0] in virtualEvents:
             m = 'on_virt_' + commands[0]
             if hasattr(self, m):
-                if self.userBase[source] is -1:
+                if self.userBase[source] is -1 and commands[0] is not 'login':
                     c.privmsg(source, "You are not in the userbase.")
                     return
                 getattr(self, m)(c, e)
@@ -228,15 +228,20 @@ class IdleRPG(SingleServerIRCBot):
         charname = self.userBase[source].get_characterName()
         level = self.userBase[source].get_level()
         charclass = self.userBase[source].get_characterClass()
-        nextl = "%d days, %d hours, %d minutes and %d seconds" % self.__int2time(ttl)
+        nextl = self.__nextLevelSentence(self.__int2time(ttl))
         c.privmsg(source, "You are %s, the level %s %s. Next level in %s" % (
             charname,level, charclass, nextl))
 
     def on_player_levelup(self, cname, level, nextl):
-        nextl = "%d days, %d hours, %d minutes and %d seconds" % self.__int2time(nextl)
+        nextl = self.__nextLevelSentence(self.__int2time(nextl))
         levelup_txt= "%s, the %s, has attained level %s! Next level in %s."
-        c.privmsg(self._gameChannel,
-                  levelup_txt % (cname, cclass, level, nextl))
+        c.privmsg(self._gameChannel, levelup_txt % (cname, cclass, level, nextl))
+
+    def __nextLevelSentence(self, time2level):
+        if len(time2level) != 4:
+            print("Error: __nextLevelSentence needs a tuple with 4 elements.")
+            return
+        return "%d days, %d hours, %d minutes and %d seconds" % time2level
 
     def __int2time(self, integer_time):
         """
