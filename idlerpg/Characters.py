@@ -102,6 +102,7 @@ class Character:
                                                   'power': item['power']}})
 
         self.characterName = characterData['character_name']
+        self.characterClass = characterData['character_class']
         self.registeredat = characterData['registeredat']
         self.idle_time = characterData['idle_time']
         self.total_idle = characterData['total_idle']
@@ -141,7 +142,6 @@ class Character:
         from hashlib import sha1
         import yaml
         import random
-        import time
 
         if int(gender) not in [1,2]:
             gender = random.randrange(1,2)
@@ -151,7 +151,7 @@ class Character:
         with file('character.yaml','r') as stream:
             myCharacter = yaml.load(stream)
 
-        myCharacter.save({'character_name': character_name,
+        myCharacter.update({'character_name': character_name,
                             'nickname': nickname,
                             'hostname': hostname,
                             'password': password,
@@ -161,6 +161,8 @@ class Character:
                             'level': 1,
                             'registeredat': time.time(),
                             'ttl': self._ttl(1),
+                            'idle_time': 0,
+                            'total_idle': 0,
                             'alignment': 0 if align not in [-1,0,1] else align
                             })
         self._myId = myCollection.insert(myCharacter)
@@ -168,7 +170,7 @@ class Character:
 
     def increaseIdleTime(self, ittl):
         cttl = self.getTTL()
-        if cttl['ttl'] >= self.idle_time+5:
+        if cttl >= self.idle_time+5:
             # LEVEL UP
             self.levelUp()
             return {'level': self.level, 'nextl': self.getTTL(),
@@ -259,6 +261,8 @@ class Character:
         self.equipment[equipKey] = (value, name)
         return 1
 
+    def get_characterClass(self):
+        return self.characterClass
 
     def get_characterName(self):
         return self.characterName

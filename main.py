@@ -17,7 +17,7 @@ class IdleRPG(SingleServerIRCBot):
     # privates= admins; public= anyone
     _privVirtualEvent = ['quit', 'doom']
     _pubVirtualEvent = ['whoami', 'register', 'login', 'logout',
-                        'newpass', 'removeme', 'align', 'status',
+                        'newpass', 'removeme', 'align', 'master',
                         'quest']
     owermask = []
 
@@ -137,6 +137,9 @@ class IdleRPG(SingleServerIRCBot):
         if commands[0] in virtualEvents:
             m = 'on_virt_' + commands[0]
             if hasattr(self, m):
+                if self.userBase[source] is -1:
+                    c.privmsg(source, "You are not in the userbase.")
+                    return
                 getattr(self, m)(c, e)
             else:
                 c.privmsg(source, """Sorry, this feature is not currently
@@ -205,7 +208,7 @@ class IdleRPG(SingleServerIRCBot):
             return
 
         if self.userBase[source] is -1:
-            c.privmsg(source, 'We also got icecream.')
+            c.privmsg(source, 'We also got icecream.') #not there
             return
 
         name, password = args[1], args[2]
@@ -218,20 +221,40 @@ class IdleRPG(SingleServerIRCBot):
                                           password=password)
         c.privmsg(source, 'Welcome '+source+'.')
 
+    def on_virt_whoami(self, c, e):
+        source = nm_to_n(e.source())
+        # needs: charname, level, class, time to next level
+        ttl=self.userBase[source].getTTL()
+        charname = self.userBase[source].get_characterName()
+        level = self.userBase[source].get_level()
+        charclass = self.userBase[source].get_characterClass()
+        nextl = "%d days, %d hours, %d minutes and %d seconds" % self.__int2time(ttl)
+        c.privmsg(source, "You are %s, the level %s %s. Next level in %s" % (
+            charname,level, charclass, nextl))
+
     def on_player_levelup(self, cname, level, nextl):
-        from math import floor
-        if nextl >= 60*60*24:
-            days = int(floor(nextl / 60*60*24))
-        if nextl >= 60*60:
-            hours = int(floor(nextl / 60*60))
-        if nextl >= 60:
-            minutes = int(floor(nextl / 60))
-        seconds = int(floor(nextl))
-        nextl = "%d days, %d hours, %d minutes and %d seconds" % (days, hours,
-                                                            minutes, seconds)
+        nextl = "%d days, %d hours, %d minutes and %d seconds" % self.__int2time(nextl)
         levelup_txt= "%s, the %s, has attained level %s! Next level in %s."
         c.privmsg(self._gameChannel,
-                  levelup_txt % {cname, cclass, level, nextl)
+                  levelup_txt % (cname, cclass, level, nextl))
+
+    def __int2time(self, integer_time):
+        """
+        Convert a integer into four mesures of time.
+        """
+        from math import floor
+        days, hours, minutes = 0, 0, 0
+        if integer_time >= 86400:
+            days = int(floor(integer_time / 86400))
+            integer_time-= 86400*days
+        if integer_time >= 3600:
+            hours = int(floor(integer_time / 3600))
+            integer_time-= 3600*hours
+        if integer_time >= 60:
+            minutes = int(floor(integer_time / 60))
+            integer_time-= 60*minutes
+        seconds = int(floor(integer_time))
+        return (days, hours, minutes, seconds)
 
     def __removeColorCode(self, body):
         """
