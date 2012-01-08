@@ -240,7 +240,8 @@ class IdleRPG(SingleServerIRCBot):
 
     def __int2time(self, integer_time):
         """
-        Convert a integer into four mesures of time.
+        Compute a human readable time, translating the timestamp into days,
+        hours, minutes and seconds. We probably don't want to fiddle with years.
         """
         from math import floor
         days, hours, minutes = 0, 0, 0
