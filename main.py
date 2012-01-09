@@ -177,7 +177,7 @@ class IdleRPG(SingleServerIRCBot):
             gender = 0
         else:
             gender, email = args[3], args[4]
-            if gender is not in [0,1,2]:
+            if gender not in [0,1,2]:
                 gender = 0
 
         template = {'character_name': charName,
@@ -232,6 +232,15 @@ class IdleRPG(SingleServerIRCBot):
         nextl = self.__nextLevelSentence(self.__int2time(ttl))
         c.privmsg(source, "You are %s, the level %s %s. Next level in %s" % (
             charname,level, charclass, nextl))
+
+    def on_virt_removeme(self, c, e):
+        source = nm_to_n(e.source())
+        self.userBase[source].removeMe()
+        del(self.userBase[source])
+        details = self.channels[self._gameChannel][source]
+        self.userBase[source] = Character(source, details[0], details[1],
+                                          self.users, autologin=False)
+        c.privmsg(source, 'Your character died of starvation.')
 
     def on_player_levelup(self, cname, level, nextl):
         nextl = self.__nextLevelSentence(self.__int2time(nextl))

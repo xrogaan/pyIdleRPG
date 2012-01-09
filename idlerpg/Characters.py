@@ -39,12 +39,15 @@ class Character:
 
 
     def __init__(self, nickname, hostname, username, myCollection,
-                 password=None, cname=None):
+                 password=None, cname=None, autologin=True):
         self.empty = True
         self.nickname = nickname
         self.hostname = hostname
         self.equipment = {}
         self._myCollection = myCollection
+
+        if autologin is False:
+            return
 
         if cname is None:
             cdata = self._myCollection.find_one({'nickname': self.nickname,
@@ -102,7 +105,7 @@ class Character:
             self.equipment.update({item['type']: {'name': item['name'],
                                                   'power': item['power']}})
 
-        del(characterData['equipment']
+        del(characterData['equipment'])
         self.characterData = characterData
         self.empty = False
         return 1
@@ -122,8 +125,14 @@ class Character:
         self.empty = True
         return 1
 
+    def removeMe(self):
+        self._myCollection.remove({'_id': self._myId})
+        self.characterData = {}
+        self.equipment = {}
+        self.empty = True
+
     def createNew(self, myCollection, character_name, character_class,
-                        nickname, hostname password, email, gender=0,
+                        nickname, hostname, password, email, gender=0,
                         align=0):
         if self.empty is not True:
             return -1
@@ -175,8 +184,8 @@ class Character:
             return {'level': self.characterData['level'], 'nextl': self.getTTL(),
                     'cname': self.get_characterName()}
         else:
-            self._myCollection.update('_id': self._myId,
-                    {$inc: {'idle_time': ittl}})
+            self._myCollection.update({'_id': self._myId},
+                    {'$inc': {'idle_time': ittl}})
             self.characterData['idle_time']+=ittl
             return 1
 
@@ -199,7 +208,7 @@ class Character:
     def levelUp(self):
         self.characterData['level']+= 1
         self._myCollection.update({'_id': self.myId},
-                                   {'$inc': {'level': 1
+                                   {'$inc': {'level': 1,
                                              'total_idle': self.characterData['idle_time']},
                                     '$set': {'idle_time': 0,
                                              'ttl': self.getTTL(self.characterData['level'])}}
@@ -250,7 +259,7 @@ class Character:
             {
                 '$set': {
                     'equipment.'+equipKey+'.power': value,
-                    'equipment.'+equipKey+.'name': name
+                    'equipment.'+equipKey+'.name': name
                     }
                 }, safe=true)
         if res['updatedExisting'] is False:
