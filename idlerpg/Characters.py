@@ -178,11 +178,11 @@ class Character:
 
     def increaseIdleTime(self, ittl):
         cttl = self.getTTL()
-        if cttl >= self.characterData['idle_time']+5:
+        if cttl >= self.characterData['idle_time']+ittl:
             # LEVEL UP
             self.levelUp()
             return {'level': self.characterData['level'], 'nextl': self.getTTL(),
-                    'cname': self.get_characterName()}
+                    'cname': self.get_characterName(), 'cclass': self.get_characterClass()}
         else:
             self._myCollection.update({'_id': self._myId},
                     {'$inc': {'idle_time': ittl}})
