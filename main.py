@@ -70,7 +70,8 @@ class IdleRPG(SingleServerIRCBot):
             #    c.who(channel)
             #    self._initialysePlayers(channel)
             #c.names(chan) # will trigger a namreply event
-        self.connection.execute_delayed(15, self.daemon_increaseTTL, [15])
+        self.connection.execute_delayed(15, self.daemon_increaseTTL, [15],
+                                        persistant=True)
 
     def on_join(self, c, e):
         nick = nm_to_n(e.source())

@@ -191,6 +191,10 @@ class IRC:
         while self.delayed_commands:
             if t >= self.delayed_commands[0][0]:
                 self.delayed_commands[0][1](*self.delayed_commands[0][2])
+                if len(self.delayed_commands)>3:
+                    self.execute_delayed(self.delayed_commands[0][3]['tick'],
+                                         self.delayed_commands[0][1],
+                                         self.delayed_commands[0][2])
                 del self.delayed_commands[0]
             else:
                 break
@@ -289,7 +293,7 @@ class IRC:
         """
         self.execute_delayed(at-time.time(), function, arguments)
 
-    def execute_delayed(self, delay, function, arguments=()):
+    def execute_delayed(self, delay, function, arguments=(), persistant=False):
         """Execute a function after a specified time.
 
         Arguments:
@@ -299,8 +303,14 @@ class IRC:
             function -- Function to call.
 
             arguments -- Arguments to give the function.
+
+            persistant -- Do not delete the job, keep processing for ever.
         """
-        bisect.insort(self.delayed_commands, (delay+time.time(), function, arguments))
+        if persistant:
+            data = (delay+time.time(), function, arguments, {'tick': delay})
+        else:
+            data = (delay+time.time(), function, arguments)
+        bisect.insort(self.delayed_commands, data)
         if self.fn_to_add_timeout:
             self.fn_to_add_timeout(delay)
 
@@ -352,8 +362,10 @@ class Connection:
     def execute_at(self, at, function, arguments=()):
         self.irclibobj.execute_at(at, function, arguments)
 
-    def execute_delayed(self, delay, function, arguments=()):
-        self.irclibobj.execute_delayed(delay, function, arguments)
+    def execute_delayed(self, delay, function, arguments=(),
+                        persistant=False):
+        self.irclibobj.execute_delayed(delay, function, arguments,
+                                       persistant)
 
 
 class ServerConnectionError(IRCError):
