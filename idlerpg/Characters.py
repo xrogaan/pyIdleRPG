@@ -165,7 +165,7 @@ class Character:
                             'password': password,
                             'email': email,
                             'gender': gender,
-                            'class': character_class,
+                            'character_class': character_class,
                             'level': 1,
                             'registeredat': time(),
                             'ttl': self.getTTL(1),
@@ -240,7 +240,7 @@ class Character:
         increase = int(penalty) * (1.14**int(self.characterData['level']))
         self._myCollection.update({'_id': self._myId},
                                    {'$inc': {'ttl': increase}})
-        return penalty
+        return increase
 
     def P(self, modifier):
         """

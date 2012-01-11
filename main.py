@@ -46,6 +46,7 @@ class IdleRPG(SingleServerIRCBot):
         return False
 
     def daemon_increaseTTL(self, seconds):
+        print("main.py:daemon_increaseTTL")
         for (nickname, user) in self.userBase.items():
             if not user.empty:
                 r = user.increaseIdleTime(seconds)
@@ -124,7 +125,9 @@ class IdleRPG(SingleServerIRCBot):
             return
         if len(e.arguments()) == 1:
             body = e.arguments()[0]
-            self.userBase[source].penalty(messagelenght=len(body))
+            p = self.userBase[source].penalty(messagelenght=len(body))
+            p = self.__nextLevelSentence(self.__int2time(p))
+            c.privmsg(source, "Talking takes time, %s is added to your clock." % p)
         elif e.arguments()[0] == 'ACTION': # ctcp ACTION
             body = source + " " + e.arguments()[1]
         else: # ignore everything else
@@ -162,10 +165,7 @@ class IdleRPG(SingleServerIRCBot):
                     return
                 getattr(self, m)(c, e)
             else:
-                c.privmsg(source, """Sorry, this feature is not currently
-                        implemented""")
-
-       # method = "on_" + e.eventtype() # I don't know why I did that.
+                c.privmsg(source, "Sorry, this feature is not currently implemented")
 
     def on_part(self, c, e):
         # do a P350 if logged in
@@ -272,6 +272,24 @@ class IdleRPG(SingleServerIRCBot):
         c.privmsg(source, "You are %s, the level %s %s. Next level in %s" % (
             charname,level, charclass, nextl))
 
+    def on_virt_align(self, c, e):
+        nick = nm_to_n(e.source)
+        args = self.__getArgs(e)
+        if len(args) == 1:
+            c.privmsg(nick, "Not enough arguments.")
+            return
+        if args[1] == 'good':
+            align = 1
+        elif args[1] == 'neutral':
+            align = 0
+        elif args[1] == 'evil':
+            align = -1
+        else:
+            c.privmsg(nick, "What you say ?")
+            return
+        self.userBase[source].set_alignment(align)
+        c.privmsg(nick, 'Your alignment has been changed to %s' % args[1])
+
     def on_virt_removeme(self, c, e):
         source = nm_to_n(e.source())
         self.userBase[source].removeMe()
@@ -281,10 +299,10 @@ class IdleRPG(SingleServerIRCBot):
                                           self.users, autologin=False)
         c.privmsg(source, 'Your character died of starvation.')
 
-    def on_player_levelup(self, cname, level, nextl):
+    def on_player_levelup(self, cname, level, nextl, cclass):
         nextl = self.__nextLevelSentence(self.__int2time(nextl))
         levelup_txt= "%s, the %s, has attained level %s! Next level in %s."
-        c.privmsg(self._gameChannel, levelup_txt % (cname, cclass, level, nextl))
+        self.connection.privmsg(self._gameChannel, levelup_txt % (cname, cclass, level, nextl))
 
     def __nextLevelSentence(self, time2level):
         if len(time2level) != 4:
