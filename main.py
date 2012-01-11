@@ -46,7 +46,6 @@ class IdleRPG(SingleServerIRCBot):
         return False
 
     def daemon_increaseTTL(self, seconds):
-        print("main.py:daemon_increaseTTL")
         for (nickname, user) in self.userBase.items():
             if not user.empty:
                 r = user.increaseIdleTime(seconds)
@@ -80,7 +79,6 @@ class IdleRPG(SingleServerIRCBot):
         """
         Will check every user on a given channel
         """
-        print('main.py:on_whoreply()')
         # ['#info', 'youple',
         # 'Voyageur-d8235afd822dbcbb3d7f3197785647294ab8941.wanadoo.fr',
         # 'irc.multimondes.net', 'w0lfy', 'H', '0 boum']
@@ -276,7 +274,7 @@ class IdleRPG(SingleServerIRCBot):
         else:
             c.privmsg(nick, "What you say ?")
             return
-        self.userBase[source].set_alignment(align)
+        self.userBase[nick].set_alignment(align)
         c.privmsg(nick, 'Your alignment has been changed to %s' % args[1])
 
     def on_virt_removeme(self, c, e):
