@@ -191,10 +191,11 @@ class IRC:
         while self.delayed_commands:
             if t >= self.delayed_commands[0][0]:
                 self.delayed_commands[0][1](*self.delayed_commands[0][2])
-                if len(self.delayed_commands)>3:
+                if len(self.delayed_commands[0]) > 3:
                     self.execute_delayed(self.delayed_commands[0][3]['tick'],
                                          self.delayed_commands[0][1],
-                                         self.delayed_commands[0][2])
+                                         self.delayed_commands[0][2],
+                                         self.delayed_commands[0][3])
                 del self.delayed_commands[0]
             else:
                 break
