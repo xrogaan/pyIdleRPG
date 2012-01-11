@@ -11,6 +11,7 @@ from time import sleep, time
 from ircbot import SingleServerIRCBot
 from irclib import nm_to_n, nm_to_uh, nm_to_h
 from pymongo import Connection, GEO2D
+from idlerpg import Characters
 
 class IdleRPG(SingleServerIRCBot):
     # virtual events are commands that can be handled by the bot
@@ -18,7 +19,7 @@ class IdleRPG(SingleServerIRCBot):
     _privVirtualEvent = ['quit', 'doom']
     _pubVirtualEvent = ['whoami', 'register', 'login', 'logout',
                         'newpass', 'removeme', 'align', 'master',
-                        'quest']
+                        'quest','help']
     owermask = []
 
     def __init__(self, config):
@@ -27,6 +28,7 @@ class IdleRPG(SingleServerIRCBot):
         self.users = self.db['users']
         self.userBase = dict()
         self._gameChannel = None
+        self.__ownermask = []
         # users schema: fullhost, nickname, password, characterName,
         #               email, loggedin
         # Todo: on channel join, ensure logged in status
@@ -37,22 +39,14 @@ class IdleRPG(SingleServerIRCBot):
                                     self.settings['nickname'])
         self.start()
 
-    def _initialysePlayers(self, channel):
-        ch = self.channels[channel]
-        for (nickname, details) in ch.userdict.iteritems():
-            self.userBase[nickname] = Character(nickname,
-                                                details[0],
-                                                details[1],
-                                                self.users)
-
     def is_loggedIn(self, nickname):
         if self.userBase.has_key(nickname):
-           if self.userBase[nickname].empty is not True:
+           if not self.userBase[nickname].empty:
                return True
         return False
 
     def daemon_increaseTTL(self, seconds):
-        for (nickname, user) in self.userBase.iteritems():
+        for (nickname, user) in self.userBase.items():
             if not user.empty:
                 r = user.increaseIdleTime(seconds)
                 if r is not 1:
@@ -72,16 +66,29 @@ class IdleRPG(SingleServerIRCBot):
                 self._gameChannel = channel
             c.join(channel)
             sleep(1)
-            if (channel is self._gameChannel):
-                c.who(channel)
-                self._initialysePlayers(channel)
-#            c.names(chan) # will trigger a namreply event
-        self.execute_delayed(15, self.daemon_increaseTTL, 15)
+            #if (channel is self._gameChannel):
+            #    c.who(channel)
+            #    self._initialysePlayers(channel)
+            #c.names(chan) # will trigger a namreply event
+        self.connection.execute_delayed(15, self.daemon_increaseTTL, [15])
+
+    def on_join(self, c, e):
+        nick = nm_to_n(e.source())
+        channel = e.target()
+        print('main.py:on_join():%s' % channel)
+        print('main.py:gameChannel:%s' % self._gameChannel)
+        print('main.py:nick:%s' % nick)
+        print('main.py:get_nickname:%s' % c.get_nickname())
+        if nick == c.get_nickname() and channel == self._gameChannel:
+            print('main.py:is gamechannel')
+            c.who(channel)
+            #self._initialysePlayers(channel)
 
     def on_whoreply(self, c, e):
         """
         Will check every user on a given channel
         """
+        print('main.py:on_whoreply()')
         # ['#info', 'youple',
         # 'Voyageur-d8235afd822dbcbb3d7f3197785647294ab8941.wanadoo.fr',
         # 'irc.multimondes.net', 'w0lfy', 'H', '0 boum']
@@ -92,13 +99,22 @@ class IdleRPG(SingleServerIRCBot):
         # e.arguments()[2] = userhost
         # e.arguments()[3] = server
         # e.arguments()[4] = nickname
+        channel = e.arguments()[0]
         nickname = e.arguments()[4]
         hostname = e.arguments()[2]
         username = e.arguments()[1]
-        self.channel.set_userdetails(nickname, [username, hostname])
+        self.channels[channel].set_userdetails(nickname, [username, hostname])
+        if not self.userBase.has_key(nickname):
+            self.userBase[nickname] = Characters.Character(nickname,
+                                                          hostname,
+                                                          username,
+                                                          self.users)
 
     def on_namreply(self, c, e):
         pass
+
+    def on_action(self, c, e):
+        self.on_pubmsg(c, e)
 
     def on_pubmsg(self, c, e):
         # will handle public messages
@@ -121,16 +137,17 @@ class IdleRPG(SingleServerIRCBot):
         else:
             return
 
-        if not e.source() in self.ownermask and source in self.owners:
-            self.ownermask.append(e.source())
+        if not e.source() in self.__ownermask \
+                and source in self.settings['owners']:
+            self.__ownermask.append(e.source())
             print('Locked on %s. Waiting orders ...' % e.source())
 
-        body = self.cleanUpMsg(body)
+        body = self.__cleanUpMsg(body)
 
         commands = body.split()
         commands[0] = commands[0].lower()
 
-        if source in self.owners:
+        if source in self.settings['owners']:
             virtualEvents = self._privVirtualEvent + self._pubVirtualEvent
         else:
             virtualEvents = self._pubVirtualEvent
@@ -138,7 +155,8 @@ class IdleRPG(SingleServerIRCBot):
         if commands[0] in virtualEvents:
             m = 'on_virt_' + commands[0]
             if hasattr(self, m):
-                if self.userBase[source].empty is True and commands[0] is not 'login':
+                if self.userBase[source].empty and \
+                        commands[0] not in ['login', 'help', 'register']:
                     c.privmsg(source, "You are not in the userbase.")
                     return
                 getattr(self, m)(c, e)
@@ -146,8 +164,7 @@ class IdleRPG(SingleServerIRCBot):
                 c.privmsg(source, """Sorry, this feature is not currently
                         implemented""")
 
-        eventtype = c
-        method = "on_" + eventtype
+       # method = "on_" + e.eventtype() # I don't know why I did that.
 
     def on_part(self, c, e):
         # do a P350 if logged in
@@ -161,20 +178,27 @@ class IdleRPG(SingleServerIRCBot):
         if self.is_loggedIn(source):
             self.userBase[source].P(30)
 
+    def on_virt_help(self, c, e):
+        nick = nm_to_n(e.source())
+        print('main.py:virt_help')
+        c.privmsg(nick, 'Keep dreaming.')
+
     # virtual events
     def on_virt_register(self, c, e):
         source = nm_to_n(e.source())
-        if self.userBase[source] is not True:
-            c.privmsg('You\'ve already got cookies.')
+        if not self.userBase[source]:
+            c.privmsg(source, 'You\'ve already got cookies.')
             return
 
-        args = self.__getArgs()
+        args = self.__getArgs(e)
         if len(args) < 4:
+            c.privmsg(source, "Can't process request, 3 arguments needed.")
+            c.privmsg(source, "usage: REGISTER <name> <password> <class> [<email>]")
             return -1
 
-        charName, charPassword, charClass = args[0], args[1], args[2]
+        charName, charPassword, charClass = args[1], args[2], args[3]
         if len(args) is 4:
-            email = args[3]
+            email = args[4]
             gender = 0
         else:
             gender, email = args[3], args[4]
@@ -192,41 +216,54 @@ class IdleRPG(SingleServerIRCBot):
         answer = self.userBase[source].createNew(self.users, **template)
         if answer is 1:
             c.privmsg(source, "You've been successfully registred. You can now login.")
+            c.privmsg(self._gameChannel, "Welcome to %s, the %s" % (charName,
+                                                                    charClass))
+        else:
+            c.privmsg(source, "A problem occured resulting of your character "\
+                              "not being registred")
 
     def on_virt_logout(self, c, e):
         # do a P20
         source = nm_to_n(e.source())
         self.userBase[source].P(20)
         self.userBase[source].unload()
-        del self.userBase[source]
+        #del self.userBase[source]
         # We need the object
-        #self.userBase[source] = -1
+        #self.userBase[source] = Character()
 
     def on_virt_login(self, c, e):
         source = nm_to_n(e.source())
-        args = self.__getArgs()
+        args = self.__getArgs(e)
         if len(args)<3:
             c.privmsg(source, 'Not enough arguments.')
             return
 
-        if self.userBase[source] is -1:
+        if not self.userBase[source].empty:
             c.privmsg(source, 'We also got icecream.') #not there
             return
 
         name, password = args[1], args[2]
         udetails = self.channels[self._gameChannel].userdict[source]
-        self.userBase[source] = Character(source,
-                                          udetails[0],
-                                          udetails[1],
-                                          self.users,
-                                          cname=name,
-                                          password=password)
-        c.privmsg(source, 'Welcome '+source+'.')
+        if self.userBase[source].login_in(name, password) == 1:
+            ttl = self.userBase[source].getTTL() - self.userBase[source].get_idle_time()
+            c.privmsg(source, 'Welcome '+source+', '+name+' is up and running.')
+            welcome = "%s, the level %d %s, is now online" \
+                      "from nickname %s. Next level in %s" % (
+                              name,
+                              self.userBase[source].get_level(),
+                              self.userBase[source].get_characterClass(),
+                              source,
+                              self.__nextLevelSentence(self.__int2time(ttl))
+                              )
+            c.privmsg(self._gameChannel, welcome)
+        else:
+            c.privmsg(source, "I couldn't find a match in the database. Please, check "\
+                              "your credentials.")
 
     def on_virt_whoami(self, c, e):
         source = nm_to_n(e.source())
         # needs: charname, level, class, time to next level
-        ttl=self.userBase[source].getTTL()
+        ttl=self.userBase[source].getTTL()-self.userBase[source].get_idle_time()
         charname = self.userBase[source].get_characterName()
         level = self.userBase[source].get_level()
         charclass = self.userBase[source].get_characterClass()
@@ -239,7 +276,7 @@ class IdleRPG(SingleServerIRCBot):
         self.userBase[source].removeMe()
         del(self.userBase[source])
         details = self.channels[self._gameChannel][source]
-        self.userBase[source] = Character(source, details[0], details[1],
+        self.userBase[source] = Characters.Character(source, details[0], details[1],
                                           self.users, autologin=False)
         c.privmsg(source, 'Your character died of starvation.')
 
@@ -298,7 +335,7 @@ class IdleRPG(SingleServerIRCBot):
         return body
 
     def __getArgs(self, event):
-        return event.arguments()[0].split('')
+        return event.arguments()[0].split(' ')
 
 if __name__ == "__main__":
     import argparse

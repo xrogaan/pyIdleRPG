@@ -75,7 +75,8 @@ class SingleServerIRCBot(SimpleIRCClient):
                   "namreply", "nick", "part", "quit"]:
             self.connection.add_global_handler(i,
                                                getattr(self, "_on_" + i),
-                                               -10)
+                                               -20)
+
     def _connected_checker(self):
         """[Internal]"""
         if not self.connection.is_connected():
@@ -357,10 +358,10 @@ class Channel:
         self.userdict[after] = self.userdict[before]
         del self.userdict[before]
         if before in self.operdict:
-            self.operdict[after] = self.operdict[before]
+            self.operdict[after] = 1 #self.operdict[before]
             del self.operdict[before]
         if before in self.voiceddict:
-            self.voiceddict[after] = self.voiceddict[before]
+            self.voiceddict[after] = 1 #self.voiceddict[before]
             del self.voiceddict[before]
 
     def set_userdetails(self, nick, details):
@@ -377,9 +378,9 @@ class Channel:
             value -- Value
         """
         if mode == "o":
-            self.operdict[value] = self.userdict[value]
+            self.operdict[value] = 1 #self.userdict[value]
         elif mode == "v":
-            self.voiceddict[value] = self.userdict[value]
+            self.voiceddict[value] = 1 #self.userdict[value]
         else:
             self.modes[mode] = value
 

@@ -39,38 +39,38 @@ class Character:
 
 
     def __init__(self, nickname, hostname, username, myCollection,
-                 password=None, cname=None, autologin=True):
+                 autologin=True):
         self.empty = True
         self.nickname = nickname
         self.hostname = hostname
+        self.username = username
         self.equipment = {}
         self._myCollection = myCollection
 
         if autologin is False:
             return
 
-        if cname is None:
-            cdata = self._myCollection.find_one({'nickname': self.nickname,
-                                                 'hostname': self.hostname,
-                                                 'username': self.username,
-                                                 'loggedin': True})
-            if len(cdata) > 0:
-                self.empty = False
-                self.load(cdata,'autoload')
-        else:
-            self.loggin_in(cname, password)
+        cdata = self._myCollection.find_one({'nickname': self.nickname,
+                                             'hostname': self.hostname,
+                                             'username': self.username,
+                                             'loggedin': True})
+        if type(cdata) is type(None):
+            return
+        if len(cdata) > 0:
+            self.empty = False
+            self.load(cdata,'autoload')
 
     def __db_update(self, spec, document):
         res = self._myCollection.update(spec, document, safe=True)
         return res['updatedExisting']
 
-    def loggin_in(self, character_name, password):
+    def login_in(self, character_name, password):
         cdata = self._myCollection.find_one({
             'character_name': character_name,
-            'password': sha1(password)
+            'password': sha1(password).hexdigest()
             })
 
-        if len(cdata) > 0:
+        if cdata is not None and len(cdata) > 0:
             self.empty = False
             self.load(cdata, 'loggin')
             return 1
@@ -156,7 +156,7 @@ class Character:
 
         password = sha1(password).hexdigest()
 
-        with file('character.yaml','r') as stream:
+        with file('include/character.yaml','r') as stream:
             myCharacter = yaml.load(stream)
 
         myCharacter.update({'character_name': character_name,
@@ -165,10 +165,10 @@ class Character:
                             'password': password,
                             'email': email,
                             'gender': gender,
-                            'class': chararcter_class,
+                            'class': character_class,
                             'level': 1,
-                            'registeredat': time.time(),
-                            'ttl': self._ttl(1),
+                            'registeredat': time(),
+                            'ttl': self.getTTL(1),
                             'idle_time': 0,
                             'total_idle': 0,
                             'alignment': 0 if align not in [-1,0,1] else align
@@ -178,14 +178,19 @@ class Character:
 
     def increaseIdleTime(self, ittl):
         cttl = self.getTTL()
-        if cttl >= self.characterData['idle_time']+ittl:
+        print('cttl %s' % cttl)
+        print('idle_time %s' % self.characterData['idle_time'])
+        if cttl <= self.characterData['idle_time']+ittl:
             # LEVEL UP
             self.levelUp()
+            nttl = self.characterData['idle_time']+ittl - self.characterData['idle_time']
+            self._myCollection.update({'_id': self._myId},
+                    {'$inc': {'idle_time': nttl, 'total_idle': ittl}})
             return {'level': self.characterData['level'], 'nextl': self.getTTL(),
                     'cname': self.get_characterName(), 'cclass': self.get_characterClass()}
         else:
             self._myCollection.update({'_id': self._myId},
-                    {'$inc': {'idle_time': ittl}})
+                    {'$inc': {'idle_time': ittl, 'total_idle': ittl}})
             self.characterData['idle_time']+=ittl
             return 1
 
@@ -195,7 +200,7 @@ class Character:
         current ttl from the database.
         """
         if level is None:
-            return self._myCollection.find_one({'_id': self._myId}, {'ttl': 1})
+            return self._myCollection.find_one({'_id': self._myId}, {'ttl': 1})['ttl']
         else:
             return int(600*(1.16**level))
 
@@ -207,7 +212,7 @@ class Character:
 
     def levelUp(self):
         self.characterData['level']+= 1
-        self._myCollection.update({'_id': self.myId},
+        self._myCollection.update({'_id': self._myId},
                                    {'$inc': {'level': 1,
                                              'total_idle': self.characterData['idle_time']},
                                     '$set': {'idle_time': 0,
@@ -219,7 +224,7 @@ class Character:
     def rename(self, newName):
         if self.empty:
             return 0
-        self._myCollection.update({'_id': self.myId},
+        self._myCollection.update({'_id': self._myId},
                                    {'$set': {'character_name': newName}})
         self.characterData['character_name'] = newName
 
@@ -233,7 +238,7 @@ class Character:
             penalty = int(messagelenght)
 
         increase = int(penalty) * (1.14**int(self.characterData['level']))
-        self._myCollection.update({'_id': self.myId},
+        self._myCollection.update({'_id': self._myId},
                                    {'$inc': {'ttl': increase}})
         return penalty
 
@@ -253,7 +258,7 @@ class Character:
     def updateEquipment(self, equipKey, value, name=None):
         res = self._myCollection.update(
             {
-                '_id': self.myId,
+                '_id': self._myId,
                 'equipment.'+equipKey+'.power': {'$lt': value}
             },
             {
@@ -290,6 +295,10 @@ class Character:
         """
         return self.getTTL()
 
+    def get_idle_time(self):
+        return self._myCollection.find_one({'_id':self._myId},
+                                           {'idle_time': 1})['idle_time']
+
     def get_alignment(self):
         return self.characterData['alignment']
 
@@ -308,26 +317,26 @@ class Character:
         if align not in [-1,0,1]:
             return -1
         return self.__db_update(
-                {'_id': self.myId},
+                {'_id': self._myId},
                 {'$set': {'alignment': align}})
 
     def set_gender(self, gender):
         if int(gender) not in [1, 2]:
             return -1
         return self.__db_update(
-                {'_id': self.myId},
+                {'_id': self._myId},
                 {'$set':{'gender': gender}})
 
     def set_email(self, email):
         if validateEmail(email) is 1:
             return self.__db_update(
-                    {'_id': self.myId},
+                    {'_id': self._myId},
                     {'$set': {'email': email}})
 
     def set_password(self, password, oldpassword):
         return self.__db_update(
                 {
-                    '_id': self.myId,
+                    '_id': self._myId,
                     'password': sha1(oldpassword).hexdigest()
                     },
                 {'password': sha1(password).hexdigest()})

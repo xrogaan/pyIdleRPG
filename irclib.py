@@ -321,7 +321,9 @@ class IRC:
     def _handle_event(self, connection, event):
         """[Internal]"""
         h = self.handlers
-        for handler in h.get("all_events", []) + h.get(event.eventtype(), []):
+        th = h.get("all_events", []) + h.get(event.eventtype(),[])
+        th.sort()
+        for handler in th: #h.get("all_events", []) + h.get(event.eventtype(), []):
             if handler[1](connection, event) == "NO MORE":
                 return
 
@@ -1044,7 +1046,11 @@ class SimpleIRCClient:
 
     def _dispatcher(self, c, e):
         """[Internal]"""
+        if DEBUG:
+            print("irclib.py:_dispatcher:%s" % e.eventtype())
+
         m = "on_" + e.eventtype()
+        im = "_"+m
         if hasattr(self, m):
             getattr(self, m)(c, e)
 
