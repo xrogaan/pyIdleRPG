@@ -178,8 +178,6 @@ class Character:
 
     def increaseIdleTime(self, ittl):
         cttl = self.getTTL()
-        print('cttl %s' % cttl)
-        print('idle_time %s' % self.characterData['idle_time'])
         if cttl <= self.characterData['idle_time']+ittl:
             # LEVEL UP
             self.levelUp()

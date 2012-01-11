@@ -67,24 +67,14 @@ class IdleRPG(SingleServerIRCBot):
                 self._gameChannel = channel
             c.join(channel)
             sleep(1)
-            #if (channel is self._gameChannel):
-            #    c.who(channel)
-            #    self._initialysePlayers(channel)
-            #c.names(chan) # will trigger a namreply event
         self.connection.execute_delayed(15, self.daemon_increaseTTL, [15],
                                         persistant=True)
 
     def on_join(self, c, e):
         nick = nm_to_n(e.source())
         channel = e.target()
-        print('main.py:on_join():%s' % channel)
-        print('main.py:gameChannel:%s' % self._gameChannel)
-        print('main.py:nick:%s' % nick)
-        print('main.py:get_nickname:%s' % c.get_nickname())
         if nick == c.get_nickname() and channel == self._gameChannel:
-            print('main.py:is gamechannel')
             c.who(channel)
-            #self._initialysePlayers(channel)
 
     def on_whoreply(self, c, e):
         """
@@ -181,7 +171,6 @@ class IdleRPG(SingleServerIRCBot):
 
     def on_virt_help(self, c, e):
         nick = nm_to_n(e.source())
-        print('main.py:virt_help')
         c.privmsg(nick, 'Keep dreaming.')
 
     # virtual events
@@ -273,7 +262,7 @@ class IdleRPG(SingleServerIRCBot):
             charname,level, charclass, nextl))
 
     def on_virt_align(self, c, e):
-        nick = nm_to_n(e.source)
+        nick = nm_to_n(e.source())
         args = self.__getArgs(e)
         if len(args) == 1:
             c.privmsg(nick, "Not enough arguments.")
