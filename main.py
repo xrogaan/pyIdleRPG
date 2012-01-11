@@ -26,7 +26,7 @@ class IdleRPG(SingleServerIRCBot):
         self.db = Connection().pyIdleRPG
         self.users = self.db['users']
         self.userBase = dict()
-        self._gameChannel = ''
+        self._gameChannel = None
         # users schema: fullhost, nickname, password, characterName,
         #               email, loggedin
         # Todo: on channel join, ensure logged in status
@@ -66,7 +66,8 @@ class IdleRPG(SingleServerIRCBot):
         print("Joining channels...")
         print(self.settings['channels'])
         for channel in self.settings['channels']:
-            if type(channel) is not type(''):
+            #There can only be one !
+            if type(channel) is not type('') and self._gameChannel is None:
                 channel = channel[0]
                 self._gameChannel = channel
             c.join(channel)
@@ -311,6 +312,8 @@ if __name__ == "__main__":
                         help='Port number to connect to')
     parser.add_argument('-c', '--channel', metavar='CHANNEL',
                         help='Join CHANNEL on connect')
+    parser.add_argument('-g', '--game-channel', action='store_true',
+                        help='Set the CHANNEL as the game channel')
     parser.add_argument('-v', '--verbose', action='store_true',
                         help='Set the verbosity level to verbose')
     parser.add_argument('configFile', metavar='CONFIG', nargs='?',
@@ -336,7 +339,11 @@ if __name__ == "__main__":
         parser.error('No server configured.')
 
     if args.channel is not None:
-        config['channels'].append(args.channel)
+        if args.game_channel is not False:
+            chan = [args.channel, 1]
+        else:
+            chan = args.channel
+        config['channels'].append(chan)
     elif len(config['channels']) == 0:
         argumentParser.error('No channel configured.')
 
