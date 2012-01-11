@@ -23,7 +23,7 @@ class IdleRPG(SingleServerIRCBot):
 
     def __init__(self, config):
         self.settings = config
-        self.db = Connection().pyIdleRPG
+        self.db = Connection(**config['mongodb']).pyIdleRPG
         self.users = self.db['users']
         self.userBase = dict()
         self._gameChannel = None
@@ -275,9 +275,9 @@ class IdleRPG(SingleServerIRCBot):
 
     def __removeColorCode(self, body):
         """
-        Remove irc color char if it's starting a chain
+        Remove irc color char, leaving text untouch
         """
-        # remove irc color char \x03nn,nnTEXT\x03
+        # color char \x03nn,nnTEXT\x03
         if "\x03" in body:
             start = body.find('\x03')
             if start+1 == len(body):
@@ -286,9 +286,6 @@ class IdleRPG(SingleServerIRCBot):
                 if not ((start>0 and start+5-x<=start or start == 0 and start-x >= -5) \
                         and body[x].isdigit() or (body[x] is ',' and body[x+1].isdigit())):
                     break
-    #        if start == 0:
-    #            body = body[:start] + body[x:]
-    #        else:
             body = body[:start] + body[x:]
             body = self.__removeColorCode(body)
         return body
@@ -305,6 +302,7 @@ class IdleRPG(SingleServerIRCBot):
 
 if __name__ == "__main__":
     import argparse
+    import yaml
     parser = argparse.ArgumentParser(description="Another IdleRPG irc bot.")
     parser.add_argument('-s', '--server', metavar='SERVERNAME',
                         help='Server address to connect to')
