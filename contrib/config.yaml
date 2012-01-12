@@ -1,0 +1,13 @@
+mongodb:
+  host: 127.0.0.1
+  port: 27010
+servers:
+ - !!python/tuple [127.0.0.1, 6667]
+channels: !!python/tuple 
+ - ['#idlerpg',1]
+nickname: &nickname
+  "IdleRPG"
+quitmsg: "Does not compute"
+owners: ['xrogaan']
+password: My secret password that no ones know.
+
