@@ -123,12 +123,14 @@ class Character:
         self.characterData = {}
         self.equipment = {}
         self.empty = True
+        self._myId = None
         return 1
 
     def removeMe(self):
         self._myCollection.remove({'_id': self._myId})
         self.characterData = {}
         self.equipment = {}
+        self._myId = None
         self.empty = True
 
     def createNew(self, myCollection, character_name, character_class,
