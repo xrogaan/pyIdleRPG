@@ -151,7 +151,7 @@ class IdleRPG(SingleServerIRCBot):
                         commands[0] not in ['login', 'help', 'register']:
                     c.privmsg(source, "You are not in the userbase.")
                     return
-                getattr(self, m)(c, e)
+                getattr(self, m)(c, e, source, self.__getArgs(e))
             else:
                 c.privmsg(source, "Sorry, this feature is not currently implemented")
 
@@ -167,21 +167,18 @@ class IdleRPG(SingleServerIRCBot):
         if self.is_loggedIn(source):
             self.userBase[source].P(30)
 
-    def on_virt_help(self, c, e):
-        nick = nm_to_n(e.source())
+    def on_virt_help(self, c, e, nick, args):
         c.privmsg(nick, 'Keep dreaming.')
 
     # virtual events
-    def on_virt_register(self, c, e):
-        source = nm_to_n(e.source())
-        if not self.userBase[source]:
+    def on_virt_register(self, c, e, nick, args):
+        if not self.userBase[nick]:
             c.privmsg(source, 'You\'ve already got cookies.')
             return
 
-        args = self.__getArgs(e)
         if len(args) < 4:
-            c.privmsg(source, "Can't process request, 3 arguments needed.")
-            c.privmsg(source, "usage: REGISTER <name> <password> <class> [<email>]")
+            c.privmsg(nick, "Can't process request, 3 arguments needed.")
+            c.privmsg(nick, "usage: REGISTER <name> <password> <class> [<email>]")
             return -1
 
         charName, charPassword, charClass = args[1], args[2], args[3]
@@ -201,67 +198,63 @@ class IdleRPG(SingleServerIRCBot):
                     'gender': gender,
                     'hostname': nm_to_h(e.source())}
 
-        answer = self.userBase[source].createNew(self.users, **template)
+        answer = self.userBase[nick].createNew(self.users, **template)
         if answer is 1:
-            c.privmsg(source, "You've been successfully registred. You can now login.")
+            c.privmsg(nick, "You've been successfully registred. You can now login.")
             c.privmsg(self._gameChannel, "Welcome to %s, the %s" % (charName,
                                                                     charClass))
         else:
-            c.privmsg(source, "A problem occured resulting of your character "\
+            c.privmsg(nick, "A problem occured resulting of your character "\
                               "not being registred")
 
-    def on_virt_logout(self, c, e):
+    def on_virt_logout(self, c, e, nick, args):
         # do a P20
-        source = nm_to_n(e.source())
-        self.userBase[source].P(20)
-        self.userBase[source].unload()
+        nick = nm_to_n(e.source())
+        penalty = self.userBase[nick].P(20)
+        self.userBase[nick].unload()
+        c.privmsg(nick, "Successfully logged out. %d seconds of penalty." % penalty)
         #del self.userBase[source]
         # We need the object
         #self.userBase[source] = Character()
 
-    def on_virt_login(self, c, e):
-        source = nm_to_n(e.source())
-        args = self.__getArgs(e)
+    def on_virt_login(self, c, e, nick, args):
         if len(args)<3:
-            c.privmsg(source, 'Not enough arguments.')
+            c.privmsg(nick, 'Not enough arguments.')
             return
 
-        if not self.userBase[source].empty:
-            c.privmsg(source, 'We also got icecream.') #not there
+        if not self.userBase[nick].empty:
+            c.privmsg(nick, 'We also got icecream.') #not there
             return
 
         name, password = args[1], args[2]
-        udetails = self.channels[self._gameChannel].userdict[source]
-        if self.userBase[source].login_in(name, password) == 1:
-            ttl = self.userBase[source].getTTL() - self.userBase[source].get_idle_time()
-            c.privmsg(source, 'Welcome '+source+', '+name+' is up and running.')
+        udetails = self.channels[self._gameChannel].userdict[nick]
+        if self.userBase[nick].login_in(name, password) == 1:
+            ttl = self.userBase[nick].getTTL() - self.userBase[nick].get_idle_time()
+            c.privmsg(nick, 'Welcome '+nick+', '+name+' is up and running.')
             welcome = "%s, the level %d %s, is now online" \
                       "from nickname %s. Next level in %s" % (
                               name,
-                              self.userBase[source].get_level(),
-                              self.userBase[source].get_characterClass(),
-                              source,
+                              self.userBase[nick].get_level(),
+                              self.userBase[nick].get_characterClass(),
+                              nick,
                               self.__nextLevelSentence(self.__int2time(ttl))
                               )
             c.privmsg(self._gameChannel, welcome)
         else:
-            c.privmsg(source, "I couldn't find a match in the database. Please, check "\
+            c.privmsg(nick, "I couldn't find a match in the database. Please, check "\
                               "your credentials.")
 
-    def on_virt_whoami(self, c, e):
-        source = nm_to_n(e.source())
+    def on_virt_whoami(self, c, e, nick, args):
         # needs: charname, level, class, time to next level
-        ttl=self.userBase[source].getTTL()-self.userBase[source].get_idle_time()
-        charname = self.userBase[source].get_characterName()
-        level = self.userBase[source].get_level()
-        charclass = self.userBase[source].get_characterClass()
+        ttl=self.userBase[nick].getTTL()-self.userBase[nick].get_idle_time()
+        charname = self.userBase[nick].get_characterName()
+        level = self.userBase[nick].get_level()
+        charclass = self.userBase[nick].get_characterClass()
         nextl = self.__nextLevelSentence(self.__int2time(ttl))
-        c.privmsg(source, "You are %s, the level %s %s. Next level in %s" % (
-            charname,level, charclass, nextl))
+        c.privmsg(nick, "You are %s, the level %s %s. Next level in %s" % (
+            charname, level, charclass, nextl))
 
-    def on_virt_align(self, c, e):
-        nick = nm_to_n(e.source())
-        args = self.__getArgs(e)
+    def on_virt_align(self, c, e, nick, args
         if len(args) == 1:
             c.privmsg(nick, "Not enough arguments.")
             return
@@ -277,14 +270,16 @@ class IdleRPG(SingleServerIRCBot):
         self.userBase[nick].set_alignment(align)
         c.privmsg(nick, 'Your alignment has been changed to %s' % args[1])
 
-    def on_virt_removeme(self, c, e):
-        source = nm_to_n(e.source())
-        self.userBase[source].removeMe()
-        del(self.userBase[source])
-        details = self.channels[self._gameChannel][source]
-        self.userBase[source] = Characters.Character(source, details[0], details[1],
-                                          self.users, autologin=False)
-        c.privmsg(source, 'Your character died of starvation.')
+    def on_virt_gender(self, c, e, nick, args):
+        pass
+
+    def on_virt_removeme(self, c, e, nick, args):
+        self.userBase[nick].removeMe()
+        del(self.userBase[nick])
+        details = self.channels[self._gameChannel][nick]
+        self.userBase[nick] = Characters.Character(nick, details[0], details[1],
+                                                   self.users, autologin=False)
+        c.privmsg(nick, 'Your character died of starvation.')
 
     def on_player_levelup(self, cname, level, nextl, cclass):
         nextl = self.__nextLevelSentence(self.__int2time(nextl))
