@@ -20,7 +20,6 @@ class IdleRPG(SingleServerIRCBot):
     _pubVirtualEvent = ['whoami', 'register', 'login', 'logout',
                         'newpass', 'removeme', 'align', 'master',
                         'quest','help']
-    owermask = []
 
     def __init__(self, config):
         self.settings = config
@@ -46,6 +45,9 @@ class IdleRPG(SingleServerIRCBot):
         return False
 
     def daemon_increaseTTL(self, seconds):
+        """
+        Increase users idle time.
+        """
         for (nickname, user) in self.userBase.items():
             if not user.empty:
                 r = user.increaseIdleTime(seconds)
@@ -254,7 +256,7 @@ class IdleRPG(SingleServerIRCBot):
         c.privmsg(nick, "You are %s, the level %s %s. Next level in %s" % (
             charname, level, charclass, nextl))
 
-    def on_virt_align(self, c, e, nick, args
+    def on_virt_align(self, c, e, nick, args):
         if len(args) == 1:
             c.privmsg(nick, "Not enough arguments.")
             return
@@ -271,7 +273,17 @@ class IdleRPG(SingleServerIRCBot):
         c.privmsg(nick, 'Your alignment has been changed to %s' % args[1])
 
     def on_virt_gender(self, c, e, nick, args):
-        pass
+        if len(args) == 1:
+            c.privmsg(nick, "Not enough arguments.")
+            return
+        if args[1] == 'female':
+            gender = 1
+        elif args[1] == 'male':
+            gender = 2
+        else:
+            c.privmsg(nick, 'Unknow gender. What are you, an hybrid ?')
+
+        self.userBase[nick].set_gender(gender)
 
     def on_virt_removeme(self, c, e, nick, args):
         self.userBase[nick].removeMe()

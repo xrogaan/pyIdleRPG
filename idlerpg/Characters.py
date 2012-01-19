@@ -274,6 +274,9 @@ class Character:
         self.equipment[equipKey] = (value, name)
         return 1
 
+    def get_gender(self):
+        return self.characterData['gender']
+
     def get_characterClass(self):
         return self.characterData['character_class']
 
