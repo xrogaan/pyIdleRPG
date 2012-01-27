@@ -140,7 +140,7 @@ class Character:
             return -1
 
         # Do not use email if
-        if validateEmail(email) < 1:
+        if email is not None and validateEmail(email) < 1:
             email=None
 
         # find twins

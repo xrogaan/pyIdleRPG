@@ -237,7 +237,7 @@ class IdleRPG(SingleServerIRCBot):
         if self.userBase[nick].login_in(name, password) == 1:
             ttl = self.userBase[nick].getTTL() - self.userBase[nick].get_idle_time()
             c.privmsg(nick, 'Welcome '+nick+', '+name+' is up and running.')
-            welcome = "%s, the level %d %s, is now online" \
+            welcome = "%s, the level %d %s, is now online " \
                       "from nickname %s. Next level in %s" % (
                               name,
                               self.userBase[nick].get_level(),
