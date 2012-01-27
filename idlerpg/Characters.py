@@ -1,19 +1,6 @@
 # -*- coding: utf-8 -*-
 # vim:set shiftwidth=4 tabstop=4 expandtab textwidth=80:
 """
-TEST check on __init__ if the player is already connected.
-TODO load when needed some character ifno
-TODO load important info such as: identify chains
-
-schema of the code:
-Character:
-    equipment
-    body
-
-    __init__(cname, chost, cequipment, cbody)
-    updateBodyPart(bodyPartId, +/-Float, Collection)
-    updateEquipment(equipmentKey, +/-Int, Name=None, Collection)
-
 Equipment data format:
     {'equipment': [{'type': 'boots', 'name': 'Leather Boots', 'power': 10}]}
 """
@@ -343,3 +330,29 @@ class Character:
                     'password': sha1(oldpassword).hexdigest()
                     },
                 {'password': sha1(password).hexdigest()})
+
+
+"""
+head:
+    eye[color, size]
+    ear[shape, size]
+    horn[shape, size]
+    hairs[size, color]
+"""
+class Anatomy:
+    def __init__(self):
+        self.eyes_type = None
+        self.eyes_color = None
+        self.horns = None
+        self.hair_lenght = None
+        self.hair_color = None
+        self.wing_type = None
+        self.ear_type = None
+        self.horn_type = None
+        self.horns_type = None
+        self.face_type = 1
+        self.antennae = None
+
+    def set_eyetype(self, etype):
+        """
+        """
