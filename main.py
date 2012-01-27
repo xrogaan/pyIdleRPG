@@ -76,6 +76,8 @@ class IdleRPG(SingleServerIRCBot):
         channel = e.target()
         if nick == c.get_nickname() and channel == self._gameChannel:
             c.who(channel)
+        elif channel == self._gameChannel:
+            c.who(nick)
 
     def on_whoreply(self, c, e):
         """
@@ -162,12 +164,14 @@ class IdleRPG(SingleServerIRCBot):
         source = nm_to_n(e.source())
         if self.is_loggedIn(source):
             self.userBase[source].P(350)
+            self.userBase[source].unload()
 
     def on_quit(self, c, e):
         # do a P30 if logged in
         source = nm_to_n(e.source())
         if self.is_loggedIn(source):
             self.userBase[source].P(30)
+            self.userBase[source].unload()
 
     def on_virt_help(self, c, e, nick, args):
         c.privmsg(nick, 'Keep dreaming.')
