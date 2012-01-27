@@ -175,7 +175,7 @@ class IdleRPG(SingleServerIRCBot):
     # virtual events
     def on_virt_register(self, c, e, nick, args):
         if not self.userBase[nick]:
-            c.privmsg(source, 'You\'ve already got cookies.')
+            c.privmsg(nick, 'You\'ve already got cookies.')
             return
 
         if len(args) < 4:
@@ -194,7 +194,7 @@ class IdleRPG(SingleServerIRCBot):
 
         template = {'character_name': charName,
                     'character_class': charClass,
-                    'nickname': source,
+                    'nickname': nick,
                     'password': charPassword,
                     'email': email,
                     'gender': gender,
