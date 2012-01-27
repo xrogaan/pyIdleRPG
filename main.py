@@ -165,6 +165,7 @@ class IdleRPG(SingleServerIRCBot):
         if self.is_loggedIn(source):
             self.userBase[source].P(350)
             self.userBase[source].unload()
+        del(self.userBase[source])
 
     def on_quit(self, c, e):
         # do a P30 if logged in
@@ -172,6 +173,7 @@ class IdleRPG(SingleServerIRCBot):
         if self.is_loggedIn(source):
             self.userBase[source].P(30)
             self.userBase[source].unload()
+        del(self.userBase[source])
 
     def on_virt_help(self, c, e, nick, args):
         c.privmsg(nick, 'Keep dreaming.')
