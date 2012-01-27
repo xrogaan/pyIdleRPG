@@ -190,13 +190,11 @@ class IdleRPG(SingleServerIRCBot):
             return -1
 
         charName, charPassword, charClass = args[1], args[2], args[3]
-        if len(args) is 4:
+        if len(args) is 5:
             email = args[4]
-            gender = 0
         else:
-            gender, email = args[3], args[4]
-            if gender not in [0,1,2]:
-                gender = 0
+            email = None
+        gender = 0
 
         template = {'character_name': charName,
                     'character_class': charClass,
