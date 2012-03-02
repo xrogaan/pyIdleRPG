@@ -352,6 +352,7 @@ class Anatomy:
         self.horns_type = None
         self.face_type = 1
         self.antennae = None
+        self.leg_type = 1 # 1. human; 2. demonic; 3. goat(fauns)
 
     def set_eyetype(self, etype):
         """
