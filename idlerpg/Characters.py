@@ -332,6 +332,9 @@ class Character:
                 {'password': sha1(password).hexdigest()})
 
 ###
+
+colorChart=[(1,'brown')]
+
 class BodyDict(object):
     def __init__(self, dict=None):
         self.__data = {}
@@ -392,6 +395,12 @@ class BodyPart(BodyDict):
     def desc(self):
         return "No description for BodyPart %s" % self.__class__
 
+    def mutate(self, **parts):
+        keys = sorted(parts.keys())
+        for kw in keys:
+            if self.has_key(kw):
+                self[kw] = parts[kw]
+
 class Breasts(BodyPart):
     __chart = [((10,12),'AA'),
                ((12,14),'A'),
@@ -415,15 +424,15 @@ class Breasts(BodyPart):
 
     def __delitem__(self, item):
         if item == "size":
-            super(Breast, self).__delitem__('sizeStr')
+            super(Breasts, self).__delitem__('sizeStr')
             return
         if item == "sizeStr":
             return
-        super(Breast, self).__delitem__(item)
+        super(Breasts, self).__delitem__(item)
 
-    def get_name(self, sizeFloat=0):
+    def get_strSize(self, sizeFloat=0):
         if sizeFloat=0:
-            sizeFloat=self.size
+            return self.sizeStr
         return self.convert2str(sizeFloat)
 
     def convert2str(self, size):
@@ -460,7 +469,7 @@ class Eyes(BodyPart):
 
 
 class Horns(BodyPart):
-    def __init__(self, hSize, hType, hQtt, rowId):
+    def __init__(self, hSize, hType=0, hQtt=0, rowId=None):
         super(Horns,self).__init__(cType=hType, cSize=hSize,
                                       cQuantity=hQtt,cRow=rowId)
 
@@ -508,12 +517,13 @@ class Anatomy(object):
         self.bodyType = 'human'
         self.morphTo = None # changed if a mutator is drank or eaten
         self.face_type = 1 # must be computed out of head type body part.
-        self.breasts = Breasts()
-        self.ears = Ears()
-        self.hairs = Hairs()
-        self.wings = Wings()
-        self.eyes = Eyes()
-        self.horns = Horns()
+        self.breasts = []
+        self.breasts.append(Breasts(size=10,rowId=len(self.breasts)+1))
+        self.ears = Ears(size=1,etype=1)
+        self.hairs = Hairs(size=1,color=1)
+        self.wings = Wings(wSize=0,wType=0)
+        self.eyes = Eyes(etype=1,eqtt=2,ecolor=1)
+        self.horns = Horns(hSize=0)
         self.arms = Arms()
         self.legs = Legs()
         self.tail = Tail()
