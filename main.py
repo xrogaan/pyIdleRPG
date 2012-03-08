@@ -76,6 +76,8 @@ class IdleRPG(SingleServerIRCBot):
         channel = e.target()
         if nick == c.get_nickname() and channel == self._gameChannel:
             c.who(channel)
+        elif channel == self._gameChannel:
+            c.who(nick)
 
     def on_whoreply(self, c, e):
         """
@@ -162,12 +164,16 @@ class IdleRPG(SingleServerIRCBot):
         source = nm_to_n(e.source())
         if self.is_loggedIn(source):
             self.userBase[source].P(350)
+            self.userBase[source].unload()
+        del(self.userBase[source])
 
     def on_quit(self, c, e):
         # do a P30 if logged in
         source = nm_to_n(e.source())
         if self.is_loggedIn(source):
             self.userBase[source].P(30)
+            self.userBase[source].unload()
+        del(self.userBase[source])
 
     def on_virt_help(self, c, e, nick, args):
         c.privmsg(nick, 'Keep dreaming.')
@@ -184,13 +190,11 @@ class IdleRPG(SingleServerIRCBot):
             return -1
 
         charName, charPassword, charClass = args[1], args[2], args[3]
-        if len(args) is 4:
+        if len(args) is 5:
             email = args[4]
-            gender = 0
         else:
-            gender, email = args[3], args[4]
-            if gender not in [0,1,2]:
-                gender = 0
+            email = None
+        gender = 0
 
         template = {'character_name': charName,
                     'character_class': charClass,
@@ -233,7 +237,7 @@ class IdleRPG(SingleServerIRCBot):
         if self.userBase[nick].login_in(name, password) == 1:
             ttl = self.userBase[nick].getTTL() - self.userBase[nick].get_idle_time()
             c.privmsg(nick, 'Welcome '+nick+', '+name+' is up and running.')
-            welcome = "%s, the level %d %s, is now online" \
+            welcome = "%s, the level %d %s, is now online " \
                       "from nickname %s. Next level in %s" % (
                               name,
                               self.userBase[nick].get_level(),
