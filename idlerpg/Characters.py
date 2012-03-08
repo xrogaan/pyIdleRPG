@@ -331,29 +331,191 @@ class Character:
                     },
                 {'password': sha1(password).hexdigest()})
 
+###
+class BodyDict(object):
+    def __init__(self, dict=None):
+        self.__data = {}
+        self.__canon_keys = {}
+        if dict is not None:
+            self.update(dict)
+    def __repr__(self):
+        return repr(self.__data)
+    def __len__(self):
+        return len(self.__data)
+    def __getitem__(self, key):
+        return self.__data[self.__canon_keys[str(key).lower()]]
+    def __setitem__(self, key, value):
+        if key in self:
+            del(self[key])
+        self.__data[key] = value
+        self.__canon_keys[str(key).lower()] = key
+    def __delitem__(self, key):
+        current_key = str(key).lower()
+        del(self.__data[self.__canon_keys[current_key]])
+        del(self.__canon_keys[current_key])
+    def __contains__(self, item):
+        return self.has_key(item)
+    def clear(self):
+        self.__data.clear()
+        self.__canon_keys.clear()
+    def update(self, dict):
+        for k, v in dict.items():
+            self.__data[k] = v
+    def has_key(self, item):
+        return str(item).lower() in self.__canon_keys
+    def get(self, key, fail=None):
+        return self.__data.get(key, fail)
+    def items(self):
+        return self.__data.items()
+    def values(self):
+        return self.__data.values()
+    def keys(self):
+        return self.__data.keys()
+    def copy(self):
+        import copy
+        return copy.copy(self)
 
-"""
-head:
-    eye[color, size]
-    ear[shape, size]
-    horn[shape, size]
-    hairs[size, color]
-"""
-class Anatomy:
+class BodyPart(BodyDict):
+    def __init__(self, cSize=0, cQuantity=0, cType=0, cColor=None, cRow=None):
+        super(BodyPart, self).__init__()
+        if cSize>0:
+            self.size = cSize
+        if cType>0:
+            self.type = cType
+        if cQuantity>0:
+            self.quantity = cQuantity
+        if cColor is not None:
+            self.color = cColor
+        if cRow is not None:
+            self.rowId = cRow
+
+    def desc(self):
+        return "No description for BodyPart %s" % self.__class__
+
+class Breasts(BodyPart):
+    __chart = [((10,12),'AA'),
+               ((12,14),'A'),
+               ((14,16),'B'),
+               ((16,18),'C'),
+               ((18,20),'D'),
+               ((20,22),'E'),
+               ((22,24),'F'),
+               ((24,26),'G'),
+               ((26,28),'H')]
+
+    def __init__(self, size, rowId):
+        super(Breasts, self).__init__(cSize=size, cRow=rowId)
+
+    def __setitem__(self, key, item):
+        if key is 'size':
+            if not isinstance(item, float):
+                raise TypeError("size must be a float")
+            self.sizeStr = self.convert2str(size)
+        super(Breasts, self).__setitem__(key, item)
+
+    def __delitem__(self, item):
+        if item == "size":
+            super(Breast, self).__delitem__('sizeStr')
+            return
+        if item == "sizeStr":
+            return
+        super(Breast, self).__delitem__(item)
+
+    def get_name(self, sizeFloat=0):
+        if sizeFloat=0:
+            sizeFloat=self.size
+        return self.convert2str(sizeFloat)
+
+    def convert2str(self, size):
+        if size == int(size):
+            raise ValueError('size must be different than %.1f' % size)
+        for sizes, name in self._chart:
+            if size > sizes[0] and size < sizes[1]:
+                return name
+        raise ValueError("Couldn't find the right type for %.1f" % size)
+
+
+class Eyes(BodyPart):
+    def __init__(self, etype, ecolor, eqtt):
+        super(Eyes, self).__init__(cType=etype, cQuantity=eqtt,
+                                   cColor=ecolor)
+
+    def mutate_type(self, newtype):
+        self.__type = newtype
+
+    def mutate_color(self, newcolor):
+        self.__color = newcolor
+
+    def pop(self):
+        """
+        Won't do what you think it would do.
+        """
+        self.__quantity-=1
+
+    def extend(self, qtt=1):
+        """
+        Won't do what you think it would do.
+        """
+        self.__quantity+=qtt
+
+
+class Horns(BodyPart):
+    def __init__(self, hSize, hType, hQtt, rowId):
+        super(Horns,self).__init__(cType=hType, cSize=hSize,
+                                      cQuantity=hQtt,cRow=rowId)
+
+class Antennae(Horns):
+    pass
+
+class Hairs(BodyPart):
+    def __init__(self, size, color):
+        """
+        size == lenght
+        """
+        super(Hairs,self).__init__(cSize=size,cColor=color)
+
+class Ears(BodyPart):
+    def __init__(self, size, eType):
+        """
+        size: 1=normal, 2=medium, 3=big
+        type: 1=human, 2=pointy
+        """
+        super(Ears, self).__init__(cSize=size, cType=eType)
+
+class Wings(BodyPart):
+    def __init__(self, wSize, wType):
+        super(Wings, self).__init__(cSize=wSize, cType=wType)
+
+class Arms(BodyPart):
+    def __init__(self, aType):
+        super(Arms, self).__init__(cType=aType)
+
+class Legs(BodyPart):
+    def __init__(self, lType):
+        super(Legs, self).__init__(cType=lType)
+
+class Tail(BodyPart):
+    def __init__(self, tType, tSize):
+        super(Tail, self).__init__(cType=tType, cSize=tSize)
+
+class Hips(BodyPart):
+    def __init__(self, hType):
+        super(Hips, self).__init__(cType=hType)
+
+class Anatomy(object):
     def __init__(self):
-        self.eyes_type = None
-        self.eyes_color = None
-        self.horns = None
-        self.hair_lenght = None
-        self.hair_color = None
-        self.wing_type = None
-        self.ear_type = None
-        self.horn_type = None
-        self.horns_type = None
-        self.face_type = 1
-        self.antennae = None
-        self.leg_type = 1 # 1. human; 2. demonic; 3. goat(fauns)
+        self.bodyTypes = ['human', 'demon', 'fauns']
+        self.bodyType = 'human'
+        self.morphTo = None # changed if a mutator is drank or eaten
+        self.face_type = 1 # must be computed out of head type body part.
+        self.breasts = Breasts()
+        self.ears = Ears()
+        self.hairs = Hairs()
+        self.wings = Wings()
+        self.eyes = Eyes()
+        self.horns = Horns()
+        self.arms = Arms()
+        self.legs = Legs()
+        self.tail = Tail()
+        self.hips = Hips()
 
-    def set_eyetype(self, etype):
-        """
-        """
