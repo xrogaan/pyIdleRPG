@@ -450,22 +450,22 @@ class Eyes(BodyPart):
                                    cColor=ecolor)
 
     def mutate_type(self, newtype):
-        self.__type = newtype
+        self['type'] = newtype
 
     def mutate_color(self, newcolor):
-        self.__color = newcolor
+        self['color'] = newcolor
 
     def pop(self):
         """
         Won't do what you think it would do.
         """
-        self.__quantity-=1
+        self['quantity']-=1
 
     def extend(self, qtt=1):
         """
         Won't do what you think it would do.
         """
-        self.__quantity+=qtt
+        self['quantity']+=qtt
 
 
 class Horns(BodyPart):
