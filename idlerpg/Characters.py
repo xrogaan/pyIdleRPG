@@ -105,8 +105,7 @@ class Character:
                 'level': self.characterData['level'],
                 'idle_time': self.characterData['idle_time']}
 
-        self._myCollection.update({'_id': self._myId},
-                {'$set': data})
+        self._myCollection.update({'_id': self._myId}, {'$set': data})
         self.characterData = {}
         self.equipment = {}
         self.empty = True
@@ -358,6 +357,8 @@ class BodyDict(object):
         del(self.__canon_keys[current_key])
     def __contains__(self, item):
         return self.has_key(item)
+    def __iter__(self):
+        return iter(self.__data)
     def clear(self):
         self.__data.clear()
         self.__canon_keys.clear()
@@ -377,6 +378,12 @@ class BodyDict(object):
     def copy(self):
         import copy
         return copy.copy(self)
+    def dcopy(self):
+        """
+        return a copy of the inner dict for database storage
+        """
+        from copy import copy
+        return copy(self.__data)
 
 class BodyPart(BodyDict):
     def __init__(self, cSize=0, cQuantity=0, cType=0, cColor=None, cRow=None):
@@ -425,7 +432,6 @@ class Breasts(BodyPart):
     def __delitem__(self, item):
         if item == "size":
             super(Breasts, self).__delitem__('sizeStr')
-            return
         if item == "sizeStr":
             return
         super(Breasts, self).__delitem__(item)
@@ -473,6 +479,18 @@ class Horns(BodyPart):
         super(Horns,self).__init__(cType=hType, cSize=hSize,
                                       cQuantity=hQtt,cRow=rowId)
 
+    def mutate_type(self, newType):
+        self['type'] = newType
+
+    def mutate_size(self, newSize):
+        self['size'] = newSize
+
+    def pop(self, qtt=1):
+        self['quantity']-=qtt
+
+    def extend(self,qtt=1):
+        self['quantity']+=qtt
+
 class Antennae(Horns):
     pass
 
@@ -483,6 +501,12 @@ class Hairs(BodyPart):
         """
         super(Hairs,self).__init__(cSize=size,cColor=color)
 
+    def mutate_color(self, newColor):
+        self['color'] = newColor
+
+    def mutate_size(self, newSize):
+        self['size'] = newSize
+
 class Ears(BodyPart):
     def __init__(self, size, eType):
         """
@@ -490,6 +514,11 @@ class Ears(BodyPart):
         type: 1=human, 2=pointy
         """
         super(Ears, self).__init__(cSize=size, cType=eType)
+
+    def mutate_type(self, newType):
+        self['type'] = newType
+    def mutate_size(self, newSize):
+        self['size'] = newSize
 
 class Wings(BodyPart):
     def __init__(self, wSize, wType):
@@ -513,19 +542,101 @@ class Hips(BodyPart):
 
 class Anatomy(object):
     def __init__(self):
+        self._bodyparts = ['breasts', 'ears', 'hairs', 'wings', 'eyes',
+                           'horns', 'arms', 'legs', 'tail', 'hips']
         self.bodyTypes = ['human', 'demon', 'fauns']
         self.bodyType = 'human'
         self.morphTo = None # changed if a mutator is drank or eaten
         self.face_type = 1 # must be computed out of head type body part.
         self.breasts = []
-        self.breasts.append(Breasts(size=10,rowId=len(self.breasts)+1))
-        self.ears = Ears(size=1,etype=1)
-        self.hairs = Hairs(size=1,color=1)
-        self.wings = Wings(wSize=0,wType=0)
-        self.eyes = Eyes(etype=1,eqtt=2,ecolor=1)
-        self.horns = Horns(hSize=0)
-        self.arms = Arms()
-        self.legs = Legs()
-        self.tail = Tail()
-        self.hips = Hips()
+        self.ears = None
+        self.hairs = None
+        self.wings = None
+        self.eyes = None
+        self.horns = None
+        self.arms = None
+        self.legs = None
+        self.tail = None
+        self.hips = None
+
+    def dbload(self, dbAnatomy):
+        """
+        discover available data
+        load them
+        define None to non-defined data
+        """
+        if dbAnatomy.has_key('breasts'):
+            breasts = dbAnatomy.pop('breasts')
+            self.breasts = []
+            for item in breasts:
+                self.breasts[item['rowId']] = Breasts(**item)
+            self.breasts.sort()
+
+        if dbAnatomy.has_key('ears'):
+            ears = dbAnatomy.pop('ears')
+            self.ears = Ears(**ears)
+        if dbAnatomy.has_key('hairs'):
+            hairs = dbAnatomy.pop('hairs')
+            self.hairs = Hairs(**hairs)
+        if dbAnatomy.has_key('wings'):
+            wings = dbAnatomy.pop('wings')
+            self.wings = Wings(**wings)
+        if dbAnatomy.has_key('eyes'):
+            eyes = dbAnatomy.pop('eyes')
+            self.eyes = Eyes(**eyes)
+        if dbAnatomy.has_key('horns'):
+            horns = dbAnatomy.pop('horns')
+            self.horns = []
+            for item in horns:
+                self.horns[item['rowId']] = Horns(**item)
+        if dbAnatomy.has_key('arms'):
+            arms = dbAnatomy.pop('arms')
+            self.arms = Arms(**arms)
+        if dbAnatomy.has_key('legs'):
+            legs = dbAnatomy.pop('legs')
+            self.legs = Legs(**legs)
+        if dbAnatomy.has_key('tail'):
+            tail = dbAnatomy.pop('tail')
+            self.tail = Tails(**tail)
+        if dbAnatomy.has_key('hips'):
+            hips = dbAnatomy.pop('hips')
+            self.hips = Hips(**hips)
+
+        if len(dbAnatomy) > 0:
+            raise Exception("Something went wrong. Anatomy isn't empty.", dbAnatomy)
+
+    def dbsave(self):
+        """
+        compute non-None data
+        dump a dict of dicts
+        """
+        data = {}
+        if self.breasts is not None:
+            breasts = list()
+            for b in self.breasts:
+                breasts[b['rowId']] = b.dcopy()
+            data.update({'breasts': breasts})
+        if self.ears is not None:
+            data.update({'ears': self.ears.dcopy()})
+        if self.hairs is not None:
+            data.update({'hairs': self.hairs.dcopy()})
+        if self.wings is not None:
+            data.update({'wings': self.wings.dcopy()})
+        if self.eyes is not None:
+            data.update({'eyes': self.eyes.dcopy()})
+        if self.horns is not None:
+            horns = list()
+            for h in self.horns:
+                horns[h['rowId']] = h.dcopy()
+            data.update({'horns': horns})
+        if self.arms is not None:
+            data.update({'arms': self.horns.dcopy()})
+        if self.legs is not None:
+            data.update({'legs': self.legs.dcopy()})
+        if self.tail is not None:
+            data.update({'tail': self.tail.dcopy()})
+        if self.hips is not None:
+            data.update({'hips': self.hips.dcopy()})
+
+        return data
 
