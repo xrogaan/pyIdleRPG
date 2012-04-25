@@ -92,8 +92,12 @@ class Character:
             self.equipment.update({item['type']: {'name': item['name'],
                                                   'power': item['power']}})
 
+        anatomyData = characterData['anatomy']
+
         del(characterData['equipment'])
         self.characterData = characterData
+        self.characterAnatomy = new Anatomy()
+        self.characterAnatomy.dbload(anatomyData)
         self.empty = False
         return 1
 
@@ -103,7 +107,8 @@ class Character:
         """
         data = {'total_idle': self.characterData['total_idle'],
                 'level': self.characterData['level'],
-                'idle_time': self.characterData['idle_time']}
+                'idle_time': self.characterData['idle_time'],
+                'anatomy': self.characterAnatomy.dbsave()}
 
         self._myCollection.update({'_id': self._myId}, {'$set': data})
         self.characterData = {}
