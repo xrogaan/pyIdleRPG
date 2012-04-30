@@ -21,6 +21,7 @@ class Bag(object):
         self._characterObj = characterObj
         self._inventoryObj = inventoryObj
         self._collectionObj = collectionObj
+        self._logger = logging.get_logger('Inventory.Bag')
         character_name = self._characterObj.get_characterName()
         bag = self._collectionObj.find({'character': character_name})
         if not bag:
@@ -47,22 +48,29 @@ class Bag(object):
     def has_key(self, key):
         return self._bag.has_key(key)
 
-    def add_item(self, name):
+    def add_item(self, name, quantity=None):
         if not self._inventoryObj.has_item(name):
             logger.warning('Bag is trying to get an unexistant item `%s\'', name)
             return
 
         if self._bag.has_key(name):
-            self._bag[name]['quantity']+=1
+            if not isinstance(quantity, int):
+                quantity = 1
+            self._bag[name]['quantity'] += quantity
             self._collectionObj.update({'_id':self._bag[name]['_id']},
                                        {'$inc': {'quantity': 1}})
         else:
             character_name = self._characterObj.get_characterName()
-            titemProperties = self.inventoryObj.get_item_by_name(name).copy()
-            titemProperties.update({'character_name': character_name})
-            _id = self._collectionObj.save(titemProperties, manipulate=True)
-            self._bag.update({name: {'obj': Item(**titemProperties),
-                                     'quantity': 1, '_id': _id}})
+            dbItemProperties = self.inventoryObj.get_item_by_name(name).copy()
+            dbItemProperties.pop('dbuid')
+            bagItemProperties = dbItemProperties
+            dbItemProperties.update({'character_name': character_name,
+                                    'quantity': 1})
+            _id = self._collectionObj.save(dbIttemProperties, manipulate=True)
+            bagItemProperties.update({'_id': _id})
+            self._bag.save({name: {'obj': Item(**bagItemProperties),
+                                   'quantity': 1}})
+        self._len+=1
 
     def remove_item(self, name):
         if not self._inventoryObj.has_item(name):
@@ -72,12 +80,13 @@ class Bag(object):
             return -1
 
         if self._bag[name]['quantity'] > 1:
-            self._bag[name]['quantity']-=1
-            self._collectionObj.update({'_id': self.bag[name]['_id']},
+            self._bag[name]['quantity'] -= 1
+            self._collectionObj.update({'_id': self.bag[name]['obj'].dbuid},
                                        {'$inc': {'quantity': -1}})
         else:
-            self._collectionObj.remove({'_id': self._bag[name]['_id']})
+            self._collectionObj.remove({'_id': self._bag[name]['obj'].dbuid})
             del self._bag[name]
+        self._len-=1
 
 
 ##
@@ -93,6 +102,7 @@ class Inventory:
         self._inames = dict()
         # unindexed item list
         self._items = list()
+        self._logger = logging.get_logger('Inventory.Inventory')
 
     def fetch_all(self):
         for itype in item_types:
@@ -124,12 +134,14 @@ class Inventory:
         if name in self._inames.keys():
             return self._inames[name]
 
-        logger.warning('Trying to get an unexistant item by name `%s\'', name)
+        self._logger.warning('Trying to get an unexistant item by name `%s\'',
+                             name)
         return -1
 
-    def get_items_by_type(self, type):
-        if type not in item_types or not self._itypes.has_key(type):
-            logger.warning('Trying to get an item by a unexistant type %s', type)
+    def get_items_by_type(self, itype):
+        if type not in item_types or not self._itypes.has_key(itype):
+            self._logger.warning('Trying to get an item by a unexistant '\
+                                 'type %s', itype)
             return -1
         return self._itypes[type]
 
@@ -139,12 +151,13 @@ class Item(object):
         self.name = name
         self.type = itype
         self.properties = properties
+        self._logger = logging.get_logger('Inventory.Item')
         if dbuid:
             self.dbuid = dbuid
 
     def copy(self):
         return {'name': self.name, 'type': self.type,
-                'properties': self.properties}
+                'properties': self.properties, '_id': self.dbuid}
 
     @property
     def type(self):
@@ -153,7 +166,8 @@ class Item(object):
     @type.setter
     def type(self, value):
         if value not in item_types:
-            logger.warning('Unknown item(%s) type %s', (self._type,self._name))
+            self._logger.warning('Unknown item(%s) type %s',
+                                 (self._type, self._name))
         self._type = value
 
     @type.deleter
@@ -166,9 +180,9 @@ class Item(object):
 
     @properties.setter
     def properties(self, value):
-        if not isinstance(value, dict()):
-            logger.critical('Properties type mismatch. Got %s expected '\
-                            'dict for item %s', (type(value), self.name))
+        if not isinstance(value, dict):
+            self._logger.critical('Properties type mismatch. Got %s expected '\
+                                  'dict for item %s', (type(value), self.name))
             self._properties = None
             return
         self._properties = value
