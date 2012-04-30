@@ -6,6 +6,14 @@ logger = logging.get_logger('character')
 
 item_types = ('consumable', 'armor', 'weapon', 'scroll', 'ring', 'misc')
 
+##
+# Database schema:
+#  Each document is an item, only one item by user. Therefor, the maximum
+#  number of item in game is Iventory_size * Bag
+# --
+# Keys:
+#  character_name, name, type, properties, quantity
+##
 class Bag(object):
     def __init__(self, characterObj, inventoryObj, collectionObj):
         self._len = 0
@@ -20,9 +28,12 @@ class Bag(object):
         for item in bag:
             itemObj = Item(item['name'], item['type'], item['properties'], item['_id'))
             if self._bag.has_key(item['name']):
-                self._bag[item['name']][1]+=1
+                logger.warning('Duplicate object %s for user %s',
+                                (item['name'], character_name))
             else:
-                self._bag.update(item['name']: (itemObj, 1))
+                self._bag.update({item['name']: {
+                                    'obj': itemObj,
+                                    'quantity': item['quantity']}})
             self._len+=1
 
     def __len__(self):
@@ -35,6 +46,39 @@ class Bag(object):
 
     def has_key(self, key):
         return self._bag.has_key(key)
+
+    def add_item(self, name):
+        if not self._inventoryObj.has_item(name):
+            logger.warning('Bag is trying to get an unexistant item `%s\'', name)
+            return
+
+        if self._bag.has_key(name):
+            self._bag[name]['quantity']+=1
+            self._collectionObj.update({'_id':self._bag[name]['_id']},
+                                       {'$inc': {'quantity': 1}})
+        else:
+            character_name = self._characterObj.get_characterName()
+            titemProperties = self.inventoryObj.get_item_by_name(name).copy()
+            titemProperties.update({'character_name': character_name})
+            _id = self._collectionObj.save(titemProperties, manipulate=True)
+            self._bag.update({name: {'obj': Item(**titemProperties),
+                                     'quantity': 1, '_id': _id}})
+
+    def remove_item(self, name):
+        if not self._inventoryObj.has_item(name):
+            logger.warning('Cannot remove item %s: unexistant.', name)
+
+        if not self._bag.has_key(name):
+            return -1
+
+        if self._bag[name]['quantity'] > 1:
+            self._bag[name]['quantity']-=1
+            self._collectionObj.update({'_id': self.bag[name]['_id']},
+                                       {'$inc': {'quantity': -1}})
+        else:
+            self._collectionObj.remove({'_id': self._bag[name]['_id']})
+            del self._bag[name]
+
 
 ##
 # dbkey: unique key to link character sheet to its inventory
@@ -98,6 +142,10 @@ class Item(object):
         if dbuid:
             self.dbuid = dbuid
 
+    def copy(self):
+        return {'name': self.name, 'type': self.type,
+                'properties': self.properties}
+
     @property
     def type(self):
         return self._type
@@ -105,8 +153,7 @@ class Item(object):
     @type.setter
     def type(self, value):
         if value not in item_types:
-            d = {'name': self._name, 'properties': self._properties}
-            logger.warning('Unknown item type %s', self._type, extra=d)
+            logger.warning('Unknown item(%s) type %s', (self._type,self._name))
         self._type = value
 
     @type.deleter
@@ -120,8 +167,8 @@ class Item(object):
     @properties.setter
     def properties(self, value):
         if type(value) != type(dict()):
-            logger.critical('Properties type mismatch. Got %s expected dict.',
-                            type(value),extra={'name':self.name})
+            logger.critical('Properties type mismatch. Got %s expected '\
+                            'dict for item %s', (type(value), self.name))
             self._properties = None
             return
         self._properties = value
