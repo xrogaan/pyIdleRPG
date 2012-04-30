@@ -166,7 +166,7 @@ class Item(object):
 
     @properties.setter
     def properties(self, value):
-        if type(value) != type(dict()):
+        if not isinstance(value, dict()):
             logger.critical('Properties type mismatch. Got %s expected '\
                             'dict for item %s', (type(value), self.name))
             self._properties = None
