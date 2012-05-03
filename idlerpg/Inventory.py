@@ -50,7 +50,7 @@ class Bag(object):
 
     def add_item(self, name, quantity=None):
         if not self._inventoryObj.has_item(name):
-            logger.warning('Bag is trying to get an unexistant item `%s\'', name)
+            self._logger.warning("Bag is trying to get an unexistant item `%s'", name)
             return
 
         if self._bag.has_key(name):
@@ -74,7 +74,7 @@ class Bag(object):
 
     def remove_item(self, name):
         if not self._inventoryObj.has_item(name):
-            logger.warning('Cannot remove item %s: unexistant.', name)
+            self._logger.warning('Cannot remove item %s: unexistant.', name)
 
         if not self._bag.has_key(name):
             return -1
