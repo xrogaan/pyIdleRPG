@@ -1,0 +1,35 @@
+= Nouveau system idlerpg.
+
+Un temps(t¹) entre l'action A et l'action B (A -- t¹ --> B) équivaux a la
+durée d'idle d'une personne. Cette durée n'est valide que si la personne
+est idle depuis au moins 30 minutes sans autre action de la part d'une
+autre personne ou 60 minutes si le salon est actif.
+
+Si t¹ est valable, le nombre de secondes est convertis en point attribués
+a un membre du corps. Le membre est désigné via un hash sha1 sur le
+premier message sortant le personnage hors d'idle:
+
+  * les 2 premiers chiffres désignent le type de mutation
+  * la première lettre désigne une partie du corps. Il exists 26
+    possibilités
+  * le 3em chiffre représente la force de mutation.
+
+
+== membre ciblé
+
+Le membre ciblé reçoit la totalité des points. Cependant, une mutation
+étant instable, la totalité du corps change légèrement. Cela dépend de la
+force de mutation (Fm).
+
+Formule: t¹ * (Fm/10)
+
+== force mutation
+
+Définit la résistance d'un type de mutation a une autre.
+
+Modifié par le score total de mutation.
+
+== type mutation
+
+Nombre N de différents type de mutations. A définir.
+
