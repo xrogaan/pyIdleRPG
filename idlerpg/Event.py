@@ -1,5 +1,7 @@
 # vim:set shiftwidth=4 tabstop=4 expandtab textwidth=80:
 """
+Data stored in the database depends on even type
+
 Event types:
     * quests (different quest type, see wiki)
     * object ecounters
@@ -18,12 +20,11 @@ import logging
 from pymongo import Database
 
 class Event(object):
-    def __init__(self, clock, etype, text, odds, oid, **kwargs):
+    def __init__(self, clock, etype, oid, **kwargs):
         self._logger = logging.getLogger('Event.Event')
         self.clock = clock
         self.etype = etype
-        self.text = text
-        self.odds = int(odds)
+        self._odds = 0
         self.oid = oid
         self.options = kwargs
         return 1
@@ -47,6 +48,24 @@ class Event(object):
 
     def get_text(self):
         return self.text
+
+class CalamityEvent(Event):
+    pass
+
+class HogEvent(Event):
+    pass
+
+class GodsendEvent(Event):
+    pass
+
+class EncounterEvent(Event):
+    pass
+
+class MonsterEncounter(Encounter):
+    pass
+
+class ObjectFind(Encounter):
+    pass
 
 class EventMasterList(object):
     """
