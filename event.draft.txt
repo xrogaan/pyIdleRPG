@@ -1,0 +1,14 @@
+E_a: odds 20*86400
+E_b: odds 24*86400
+E_C: odds  8*86400
+
+if rand(E_a.odds/clock) < $usersOnline:
+  E_a.execute()
+
+
+IdleRPG: liste des joueurs
+    initiation d'un tick. Chaque tick appelle Event.
+    > a passer a Event:
+      objet irc
+      liste des usagers
+      objet Database
