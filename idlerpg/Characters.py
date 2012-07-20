@@ -545,6 +545,10 @@ class Hips(BodyPart):
     def __init__(self, hType):
         super(Hips, self).__init__(cType=hType)
 
+class Tongue(BodyPart):
+    def __init__(self, tType, length):
+        super(Tongue, self).__init__(cType=tType, cSize=length)
+
 class Anatomy(object):
     def __init__(self):
         self._bodyparts = ['breasts', 'ears', 'hairs', 'wings', 'eyes',
@@ -553,9 +557,13 @@ class Anatomy(object):
         self.bodyType = 'human'
         self.morphTo = None # changed if a mutator is drank or eaten
         self.face_type = 1 # must be computed out of head type body part.
+        self.tallness = 1 # 1-tiny, 2-small, 3-medium, 4-large, 5-huge
+
+
         self.breasts = []
         self.ears = None
         self.hairs = None
+        self.tongue = None
         self.wings = None
         self.eyes = None
         self.horns = None
@@ -583,6 +591,9 @@ class Anatomy(object):
         if dbAnatomy.has_key('hairs'):
             hairs = dbAnatomy.pop('hairs')
             self.hairs = Hairs(**hairs)
+        if dbAnatomy.has_key('tongue'):
+            tongue = dbAnatomy.pop('tongue')
+            self.tongue = Tongue(**tongue)
         if dbAnatomy.has_key('wings'):
             wings = dbAnatomy.pop('wings')
             self.wings = Wings(**wings)
@@ -625,6 +636,8 @@ class Anatomy(object):
             data.update({'ears': self.ears.dcopy()})
         if self.hairs is not None:
             data.update({'hairs': self.hairs.dcopy()})
+        if self.tongue is not None:
+            data.update({'tongue': self.tongue.dcopy()})
         if self.wings is not None:
             data.update({'wings': self.wings.dcopy()})
         if self.eyes is not None:
