@@ -10,7 +10,7 @@ a un membre du corps. Le membre est désigné via un hash sha1 sur le
 premier message sortant le personnage hors d'idle:
 
   * les 2 premiers chiffres désignent le type de mutation
-  * la première lettre désigne une partie du corps. Il exists 26
+  * la première lettre désigne une partie du corps. Il existe 26
     possibilités
   * le 3em chiffre représente la force de mutation.
 
@@ -21,7 +21,8 @@ Le membre ciblé reçoit la totalité des points. Cependant, une mutation
 étant instable, la totalité du corps change légèrement. Cela dépend de la
 force de mutation (Fm).
 
-Formule: `t¹ * (Fm/10)`
+Membre: S+t¹
+Formule d'entropie sur le corps: `t¹ * (ln(Fm + 1) / 10)`
 
 ## Force de la mutation
 
