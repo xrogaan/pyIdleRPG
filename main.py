@@ -68,7 +68,7 @@ class IdleRPG(SingleServerIRCBot):
                 self._gameChannel = channel
             c.join(channel)
             sleep(1)
-        self.connection.execute_delayed(15, self.daemon_increaseTTL, [15],
+        self.connection.execute_delayed(1, self.daemon_increaseTTL, [1],
                                         persistant=True)
 
     def on_join(self, c, e):
