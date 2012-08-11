@@ -20,12 +20,17 @@ import logging
 from pymongo import Database
 
 class Event(object):
-    def __init__(self, clock, etype, oid, **kwargs):
+    def __init__(self, clock, etype, **kwargs):
+        """
+        * clock should be the rate at which the game ticks (global config)
+        * etype is the event type (listed in EventMasterList)
+        * kwargs should contain information about the player list and access
+          to the character objects
+        """
         self._logger = logging.getLogger('Event.Event')
         self.clock = clock
         self.etype = etype
         self._odds = 0
-        self.oid = oid
         self.options = kwargs
         return 1
 
@@ -50,11 +55,30 @@ class Event(object):
         return self.text
 
 class CalamityEvent(Event):
-    pass
+    def __init__(self, clock, etype, kwargs):
+        super(CalamityEvent, self).__init__(clock, etype, kwargs)
+        self.odds = self.options['odds']
+        self._messages = self.options['msg']
+
+    def message(self):
+        from random import randint
+        n = randint(0, len(self._messages))
+        return self._messages[n]
 
 class HogEvent(Event):
-    pass
+    """
+    * move a player forward or backward in time by a fraction of the user total
+      idle
+    * one in five chance to trigger bad outcome
 
+    """
+    def __init__(self, clock, etype, kwargs):
+        super(HogEvent, self).__init__(clock, etype, kwargs)
+
+    def message(self):
+        return ''
+
+# trigger improvements onto player
 class GodsendEvent(Event):
     pass
 
@@ -64,6 +88,7 @@ class EncounterEvent(Event):
 class MonsterEncounter(Encounter):
     pass
 
+# once the inventory is properly done
 class ObjectFind(Encounter):
     pass
 
@@ -77,11 +102,11 @@ class EventMasterList(object):
                        'monster_encounter')
         self._documentObj = databaseObj.events
         self._events = dict()
-        for calamity in self._documentObj.find({'type':'calamity'}):
+        for calamity in self._documentObj.find({'etype':'calamity'}):
             if not self._events.has_key('calamity'):
                 self._events.update({'calamity': list()})
-            Event(clock=config.clock, **calamity)
             self._events['calamity'].append(Event(clock=config.clock,
+                                                  etype='calamity',
                                                   **calamity))
 
 class EventManager(object):
